@@ -16,4 +16,7 @@ class Users extends Authenticatable
     public function Pemakaian(){
         return $this->hasMany(Pemakaian::class,'id_pemakaian');
     }
+    public function Keluhan(){
+        return $this->hasMany(Keluhan::class,'id_keluhan');
+    }
 }

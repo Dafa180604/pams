@@ -17,7 +17,7 @@ return new class extends Migration
             $table->integer('meter_awal');
             $table->integer('meter_akhir');
             $table->integer('jumlah_pemakaian');
-            $table->string('foto_meteran');
+            $table->string('foto_meteran')->nullable();
             $table->dateTime('waktu_catat');
             $table->string('petugas');
             $table->timestamps();

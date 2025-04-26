@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BelumLunasController;
 use App\Http\Controllers\EditSalahCatatController;
+use App\Http\Controllers\KeluhanController;
 use App\Http\Controllers\LaporanController;
 use App\Http\Controllers\LunasController;
 use App\Http\Controllers\PemakaianController;
@@ -57,6 +58,7 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('/laporan', LaporanController::class);
         Route::resource('/pengeluaran', PengeluaranController::class);
         Route::resource('/EditSalahCatat', EditSalahCatatController::class);
+        Route::resource('/keluhan', KeluhanController::class);
         
         
 });
