@@ -3,10 +3,58 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\BebanBiaya;
+use App\Models\KategoriBiayaAir;
 use Illuminate\Http\Request;
+use App\Models\Pemakaian;
+use App\Models\Users;
+use Illuminate\Support\Facades\Auth;
+use App\Models\Transaksi;
+use Google\Cloud\Storage\StorageClient;
 
 class PemakaianController extends Controller
 {
+    // Method untuk menampilkan pemakaian
+    public function indexPemakaian(Request $request)
+    {
+        $perPage = $request->get('per_page', 10); // default 10 jika tidak dikirim dari client
+        $search = $request->get('search'); // menangkap parameter pencarian dari query string
+    
+        $query = Users::where('role', 'pelanggan');
+    
+        // Tambahkan kondisi pencarian jika search tidak kosong
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('nama', 'like', "%{$search}%")
+                  ->orWhere('alamat', 'like', "%{$search}%")
+                  ->orWhere('no_hp', 'like', "%{$search}%");
+            });
+        }
+    
+        $users = $query->paginate($perPage);
+    
+        // Mapping data user dengan tambahan meter_akhir
+        $mapped = $users->getCollection()->map(function ($user) {
+            $penggunaanTerakhir = Pemakaian::where('id_users', $user->id_users)->latest()->first();
+            $defaultValue = $user->jumlah_air ?? 0;
+    
+            return [
+                'id_users' => $user->id_users,
+                'nama' => $user->nama,
+                'alamat' => $user->alamat,
+                'rw' => $user->rw,
+                'rt' => $user->rt,
+                'no_hp' => $user->no_hp,
+                'jumlah_air' => $defaultValue,
+                'meter_akhir' => $penggunaanTerakhir ? $penggunaanTerakhir->meter_akhir : $defaultValue,
+                'waktu_catat' => $penggunaanTerakhir ? $penggunaanTerakhir->waktu_catat : null,
+            ];
+        });
+    
+        $users->setCollection($mapped);
+    
+        return response()->json($users);
+    }
     
     // Method untuk menyimpan data pemakaian
     public function store(Request $request)
