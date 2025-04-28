@@ -353,4 +353,19 @@ class PemakaianController extends Controller
         ];
     }
     
+    public function getMeterAkhir($id_users)
+    {
+        // Ambil data penggunaan terakhir berdasarkan id_users
+        $penggunaanTerakhir = Pemakaian::where('id_users', $id_users)->latest()->first();
+
+        // Ambil nilai jumlah_air dari tabel users
+        $user = Users::find($id_users);
+        $defaultValue = $user ? $user->jumlah_air : 0;
+
+        // Kembalikan nilai Meter Akhir jika data ada, jika tidak kembalikan nilai jumlah_air dari user
+        return response()->json([
+            'meter_akhir' => $penggunaanTerakhir ? $penggunaanTerakhir->meter_akhir : $defaultValue
+        ]);
+    }
+    
 }
