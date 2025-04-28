@@ -17,22 +17,22 @@ class PemakaianController extends Controller
      * Display a listing of the resource.
      */
     public function index()
-{
-    $dataPelanggan = Users::where('role', 'pelanggan')->get()->map(function ($user) {
-        // Ambil data penggunaan terakhir berdasarkan id_users
-        $penggunaanTerakhir = Pemakaian::where('id_users', $user->id_users)->latest()->first();
-
-        // Ambil nilai jumlah_air dari tabel users
-        $defaultValue = $user->jumlah_air ?? 0;
-
-        // Tambahkan atribut meter_akhir ke objek user
-        $user->meter_akhir = $penggunaanTerakhir ? $penggunaanTerakhir->meter_akhir : $defaultValue;
-
-        return $user;
-    });
-
-    return view('pemakaian.index', ['dataPelanggan' => $dataPelanggan]);
-}
+    {
+        $dataPelanggan = Users::where('role', 'pelanggan')->get()->map(function ($user) {
+            // Ambil data penggunaan terakhir berdasarkan id_users
+            $penggunaanTerakhir = Pemakaian::where('id_users', $user->id_users)->latest()->first();
+    
+            // Ambil nilai jumlah_air dari tabel users
+            $defaultValue = $user->jumlah_air ?? 0;
+    
+            // Tambahkan atribut meter_akhir ke objek user
+            $user->meter_akhir = $penggunaanTerakhir ? $penggunaanTerakhir->meter_akhir : $defaultValue;
+    
+            return $user;
+        });
+    
+        return view('pemakaian.index', ['dataPelanggan' => $dataPelanggan]);
+    }
 
     /**
      * Show the form for creating a new resource.
@@ -70,111 +70,112 @@ class PemakaianController extends Controller
     }
     
     private static function calculateBill(float $pemakaian): array
-{
-    // Ambil nilai beban dari database
-    $beban = self::getBeban();
-    $bebanBiaya = $beban ? $beban['tarif'] : 0;
-    $bebanId = $beban ? $beban['id'] : null;
-
-    // Jika pemakaian 0, hanya mengenakan biaya beban
-    if ($pemakaian <= 0) {
-        return [
-            'total' => $bebanBiaya,
-            'beban_id' => $bebanId,
-            'kategori_id' => null,
-            'detail' => [
-                'beban' => [
-                    'id' => $bebanId,
-                    'tarif' => $bebanBiaya
-                ],
-                'kategori' => []
-            ]
-        ];
-    }
-
-    // Ambil kategori biaya dari database
-    $kategori = self::getKategoriBiaya();
-
-    // Jika tidak ada kategori biaya, return hanya biaya beban
-    if (empty($kategori)) {
-        return [
-            'total' => $bebanBiaya,
-            'beban_id' => $bebanId,
-            'kategori_id' => null,
-            'detail' => [
-                'beban' => [
-                    'id' => $bebanId,
-                    'tarif' => $bebanBiaya
-                ],
-                'kategori' => []
-            ]
-        ];
-    }
-
-    $total = $bebanBiaya;
-    $sisaPemakaian = $pemakaian;
-    $lastUsedKategoriId = null;
-    $kategoriSnapshot = [];
-    $lastKategori = end($kategori);
-    reset($kategori);
-
-    foreach ($kategori as $index => $tarif) {
-        $min = $tarif['min'];
-        $max = $tarif['max'];
-        $rate = $tarif['rate'];
-
-        if ($sisaPemakaian <= 0 || $pemakaian < $min) {
-            break;
-        }
-
-        $volume = 0;
-
-        if ($index == 0) {
-            $volume = min($max, $pemakaian);
-        } else {
-            $prevMax = $kategori[$index - 1]['max'];
-            if ($pemakaian > $prevMax) {
-                // Jika ini kategori terakhir dan pemakaian melebihi batas_atas
-                if ($tarif === $lastKategori && $pemakaian > $max) {
-                    $volume = $pemakaian - $prevMax; // Hitung semua sisa pemakaian
-                } else {
-                    $volume = min($pemakaian - $prevMax, $max - $prevMax);
-                }
-            }
-        }
-
-        if ($volume > 0) {
-            $subtotal = $volume * $rate;
-            $total += $subtotal;
-            $lastUsedKategoriId = $tarif['id'];
-            
-            // Simpan detail kategori untuk snapshot
-            $kategoriSnapshot[] = [
-                'id_kategori' => $tarif['id'],
-                'batas_bawah' => $min,
-                'batas_atas' => $max,
-                'tarif' => $rate,
-                'volume' => $volume,
-                'subtotal' => $subtotal
+    {
+        // Ambil nilai beban dari database
+        $beban = self::getBeban();
+        $bebanBiaya = $beban ? $beban['tarif'] : 0;
+        $bebanId = $beban ? $beban['id'] : null;
+    
+        // Jika pemakaian 0, hanya mengenakan biaya beban
+        if ($pemakaian <= 0) {
+            return [
+                'total' => $bebanBiaya,
+                'beban_id' => $bebanId,
+                'kategori_id' => null,
+                'detail' => [
+                    'beban' => [
+                        'id' => $bebanId,
+                        'tarif' => $bebanBiaya
+                    ],
+                    'kategori' => []
+                ]
             ];
         }
-
-        $sisaPemakaian -= $volume;
+    
+        // Ambil kategori biaya dari database
+        $kategori = self::getKategoriBiaya();
+    
+        // Jika tidak ada kategori biaya, return hanya biaya beban
+        if (empty($kategori)) {
+            return [
+                'total' => $bebanBiaya,
+                'beban_id' => $bebanId,
+                'kategori_id' => null,
+                'detail' => [
+                    'beban' => [
+                        'id' => $bebanId,
+                        'tarif' => $bebanBiaya
+                    ],
+                    'kategori' => []
+                ]
+            ];
+        }
+    
+        $total = $bebanBiaya;
+        $sisaPemakaian = $pemakaian;
+        $lastUsedKategoriId = null;
+        $kategoriSnapshot = [];
+        $lastKategori = end($kategori);
+        reset($kategori);
+    
+        foreach ($kategori as $index => $tarif) {
+            $min = $tarif['min'];
+            $max = $tarif['max'];
+            $rate = $tarif['rate'];
+    
+            if ($sisaPemakaian <= 0 || $pemakaian < $min) {
+                break;
+            }
+    
+            $volume = 0;
+    
+            if ($index == 0) {
+                $volume = min($max, $pemakaian);
+            } else {
+                $prevMax = $kategori[$index - 1]['max'];
+                if ($pemakaian > $prevMax) {
+                    // Jika ini kategori terakhir dan pemakaian melebihi batas_atas
+                    if ($tarif === $lastKategori && $pemakaian > $max) {
+                        $volume = $pemakaian - $prevMax; // Hitung semua sisa pemakaian
+                    } else {
+                        $volume = min($pemakaian - $prevMax, $max - $prevMax);
+                    }
+                }
+            }
+    
+            if ($volume > 0) {
+                $subtotal = $volume * $rate;
+                $total += $subtotal;
+                $lastUsedKategoriId = $tarif['id'];
+                
+                // Simpan detail kategori untuk snapshot
+                $kategoriSnapshot[] = [
+                    'id_kategori' => $tarif['id'],
+                    'batas_bawah' => $min,
+                    'batas_atas' => $max,
+                    'tarif' => $rate,
+                    'volume' => $volume,
+                    'subtotal' => $subtotal
+                ];
+            }
+    
+            $sisaPemakaian -= $volume;
+        }
+    
+        return [
+            'total' => $total,
+            'beban_id' => $bebanId,
+            'kategori_id' => $lastUsedKategoriId,
+            'detail' => [
+                'beban' => [
+                    'id' => $bebanId,
+                    'tarif' => $bebanBiaya
+                ],
+                'kategori' => $kategoriSnapshot
+            ]
+        ];
     }
-
-    return [
-        'total' => $total,
-        'beban_id' => $bebanId,
-        'kategori_id' => $lastUsedKategoriId,
-        'detail' => [
-            'beban' => [
-                'id' => $bebanId,
-                'tarif' => $bebanBiaya
-            ],
-            'kategori' => $kategoriSnapshot
-        ]
-    ];
-}
+    
     public function store(Request $request)
     {
         // Validasi data input
@@ -381,91 +382,91 @@ class PemakaianController extends Controller
      * Update the specified resource in storage.
      */
     public function update(Request $request, string $id_transaksi)
-{
-    $request->validate([
-        'uang_bayar' => 'required|numeric',
-    ], [
-        'uang_bayar.required' => 'Jumlah uang bayar wajib diisi!',
-        'uang_bayar.numeric' => 'Jumlah uang bayar harus berupa angka!',
-    ]);
-
-    try {
-        // Find the existing transaction
-        $transaksi = Transaksi::findOrFail($id_transaksi);
-
-        // Calculate kembalian
-        $kembalian = $request->uang_bayar - $transaksi->jumlah_rp;
-
-        // Update the attributes
-        $transaksi->tgl_pembayaran = now();
-        $transaksi->status_pembayaran = $request->status_pembayaran ?? 'Lunas';
-        $transaksi->uang_bayar = $request->uang_bayar;
-        $transaksi->kembalian = $kembalian;
-
-        // Save the changes to the existing record
-        $transaksi->save();
-
-        // Jika status pembayaran adalah Lunas, tambahkan ke tabel laporan
-        if ($transaksi->status_pembayaran == 'Lunas') {
-            // Dapatkan bulan dan tahun saat ini
-            $bulan = date('F'); // Nama bulan dalam bahasa Inggris
-            $tahun = date('Y');
-
-            // Ubah nama bulan ke bahasa Indonesia jika diperlukan
-            $bulanIndonesia = [
-                'January' => 'Januari',
-                'February' => 'Februari',
-                'March' => 'Maret',
-                'April' => 'April',
-                'May' => 'Mei',
-                'June' => 'Juni',
-                'July' => 'Juli',
-                'August' => 'Agustus',
-                'September' => 'September',
-                'October' => 'Oktober',
-                'November' => 'November',
-                'December' => 'Desember'
-            ];
-            // Assuming there's a relationship between Transaksi and Pemakaian
-            $pemakaian = $transaksi->pemakaian; // Or however you access the related record
-
-            // Get the petugas value - you might need to adjust this based on your exact relationship
-            $petugas = $pemakaian ? $pemakaian->petugas : 'Unknown';
-
-            $bulanTeks = $bulanIndonesia[$bulan] ?? $bulan;
-            $keterangan = "Terima bayar {$bulanTeks} {$tahun} oleh petugas {$petugas}";
-
-            // Cek apakah sudah ada laporan dengan bulan dan tahun yang sama
-            $existingLaporan = Laporan::where('keterangan', $keterangan)->first();
-
-            if ($existingLaporan) {
-                // Jika sudah ada, update jumlah uang masuk
-                $existingLaporan->uang_masuk += $transaksi->jumlah_rp;
-                $existingLaporan->save();
-            } else {
-                // Jika belum ada, buat laporan baru
-                $laporan = new Laporan();
-                $laporan->tanggal = now(); // Tetap menggunakan tanggal hari ini untuk field tanggal
-                $laporan->uang_masuk = $transaksi->jumlah_rp;
-                $laporan->keterangan = $keterangan;
-                $laporan->save();
-            }
-        }
-
-        // Fetch the transaction data for the receipt view
-        // Generate the print receipt URL
-        $cetakUrl = route('lunas.cetak', ['id_transaksi' => $id_transaksi]);
-
-        // Redirect to index with success message and JavaScript to open receipt in new tab
-        return redirect()->route('lunas.index')->with([
-            'pembayaran_berhasil' => 'Pembayaran berhasil diproses.',
-            'cetakUrl' => $cetakUrl
+    {
+        $request->validate([
+            'uang_bayar' => 'required|numeric',
+        ], [
+            'uang_bayar.required' => 'Jumlah uang bayar wajib diisi!',
+            'uang_bayar.numeric' => 'Jumlah uang bayar harus berupa angka!',
         ]);
-
-    } catch (\Exception $e) {
-        return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+    
+        try {
+            // Find the existing transaction
+            $transaksi = Transaksi::findOrFail($id_transaksi);
+    
+            // Calculate kembalian
+            $kembalian = $request->uang_bayar - $transaksi->jumlah_rp;
+    
+            // Update the attributes
+            $transaksi->tgl_pembayaran = now();
+            $transaksi->status_pembayaran = $request->status_pembayaran ?? 'Lunas';
+            $transaksi->uang_bayar = $request->uang_bayar;
+            $transaksi->kembalian = $kembalian;
+    
+            // Save the changes to the existing record
+            $transaksi->save();
+    
+            // Jika status pembayaran adalah Lunas, tambahkan ke tabel laporan
+            if ($transaksi->status_pembayaran == 'Lunas') {
+                // Dapatkan bulan dan tahun saat ini
+                $bulan = date('F'); // Nama bulan dalam bahasa Inggris
+                $tahun = date('Y');
+    
+                // Ubah nama bulan ke bahasa Indonesia jika diperlukan
+                $bulanIndonesia = [
+                    'January' => 'Januari',
+                    'February' => 'Februari',
+                    'March' => 'Maret',
+                    'April' => 'April',
+                    'May' => 'Mei',
+                    'June' => 'Juni',
+                    'July' => 'Juli',
+                    'August' => 'Agustus',
+                    'September' => 'September',
+                    'October' => 'Oktober',
+                    'November' => 'November',
+                    'December' => 'Desember'
+                ];
+                // Assuming there's a relationship between Transaksi and Pemakaian
+                $pemakaian = $transaksi->pemakaian; // Or however you access the related record
+    
+                // Get the petugas value - you might need to adjust this based on your exact relationship
+                $petugas = $pemakaian ? $pemakaian->petugas : 'Unknown';
+    
+                $bulanTeks = $bulanIndonesia[$bulan] ?? $bulan;
+                $keterangan = "Terima bayar {$bulanTeks} {$tahun} oleh petugas {$petugas}";
+    
+                // Cek apakah sudah ada laporan dengan bulan dan tahun yang sama
+                $existingLaporan = Laporan::where('keterangan', $keterangan)->first();
+    
+                if ($existingLaporan) {
+                    // Jika sudah ada, update jumlah uang masuk
+                    $existingLaporan->uang_masuk += $transaksi->jumlah_rp;
+                    $existingLaporan->save();
+                } else {
+                    // Jika belum ada, buat laporan baru
+                    $laporan = new Laporan();
+                    $laporan->tanggal = now(); // Tetap menggunakan tanggal hari ini untuk field tanggal
+                    $laporan->uang_masuk = $transaksi->jumlah_rp;
+                    $laporan->keterangan = $keterangan;
+                    $laporan->save();
+                }
+            }
+    
+            // Fetch the transaction data for the receipt view
+            // Generate the print receipt URL
+            $cetakUrl = route('lunas.cetak', ['id_transaksi' => $id_transaksi]);
+    
+            // Redirect to index with success message and JavaScript to open receipt in new tab
+            return redirect()->route('lunas.index')->with([
+                'pembayaran_berhasil' => 'Pembayaran berhasil diproses.',
+                'cetakUrl' => $cetakUrl
+            ]);
+    
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
     }
-}
 
     /**
      * Remove the specified resource from storage.

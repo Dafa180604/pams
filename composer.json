@@ -10,7 +10,7 @@
         "google/cloud-storage": "^1.46",
         "kreait/firebase-php": "^7.17",
         "laravel/framework": "^11.31",
-        "laravel/sanctum": "^4.0",
+        "laravel/sanctum": "^4.1",
         "laravel/tinker": "^2.9",
         "setasign/fpdf": "^1.8",
         "simplesoftwareio/simple-qrcode": "^4.2"
