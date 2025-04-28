@@ -13,7 +13,7 @@ class Transaksi extends Model
 
     public function pemakaian()
     {
-        return $this->belongsTo(pemakaian::class, 'id_pemakaian');
+        return $this->belongsTo(Pemakaian::class, 'id_pemakaian');
     }
     public function biaya_beban()
     {
