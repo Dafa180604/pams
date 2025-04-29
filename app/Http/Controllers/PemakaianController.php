@@ -429,12 +429,11 @@ class PemakaianController extends Controller
                 ];
                 // Assuming there's a relationship between Transaksi and Pemakaian
                 $pemakaian = $transaksi->pemakaian; // Or however you access the related record
-    
-                // Get the petugas value - you might need to adjust this based on your exact relationship
-                $petugas = $pemakaian ? $pemakaian->petugas : 'Unknown';
+                
+                $namaPetugas = User::findOrFail($pemakaian->petugas)->nama;
     
                 $bulanTeks = $bulanIndonesia[$bulan] ?? $bulan;
-                $keterangan = "Terima bayar {$bulanTeks} {$tahun} oleh petugas {$petugas}";
+                $keterangan = "Terima bayar {$bulanTeks} {$tahun} oleh petugas {$namaPetugas}";
     
                 // Cek apakah sudah ada laporan dengan bulan dan tahun yang sama
                 $existingLaporan = Laporan::where('keterangan', $keterangan)->first();

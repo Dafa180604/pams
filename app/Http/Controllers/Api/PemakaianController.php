@@ -64,9 +64,10 @@ class PemakaianController extends Controller
         // Validasi data input
         $validated = $request->validate([
             'id_users' => 'required|exists:users,id_users',
+            'id_petugas' => 'required|exists:users,id_users',
             'meter_awal' => 'required|numeric',
             'meter_akhir' => 'required|numeric|gte:meter_awal',
-            // 'foto_meteran' => 'nullable|image', // Foto meteran opsional
+            'foto_meteran' => 'nullable|image', // Foto meteran opsional
         ], [
             'meter_awal.required' => 'Meter Awal Wajib Diisi!',
             'meter_awal.numeric' => 'Meter Awal Wajib di Isi Angka!',
@@ -82,42 +83,42 @@ class PemakaianController extends Controller
         $pemakaian->meter_akhir = $request->meter_akhir;
         $pemakaian->jumlah_pemakaian = $pemakaian->meter_akhir - $pemakaian->meter_awal;
         $pemakaian->waktu_catat = now();
-        $pemakaian->petugas = Auth::user()->nama ?? 'Petugas Default'; 
-        $pemakaian->foto_meteran = null;
+        $pemakaian->petugas = $request->id_petugas; 
+        // $pemakaian->foto_meteran = null;
 
         // Simpan pemakaian
         $pemakaian->save();
 
-        // Upload foto ke Firebase jika ada
-        // if ($request->hasFile('foto_meteran')) {
-        //     $file = $request->file('foto_meteran');
-        //     $fileName = 'foto_meteran/' . $pemakaian->id_pemakaian . '/' . time() . '_' . $file->getClientOriginalName();
+        //Upload foto ke Firebase jika ada
+        if ($request->hasFile('foto_meteran')) {
+            $file = $request->file('foto_meteran');
+            $fileName = 'foto_meteran/' . $pemakaian->id_pemakaian . '/' . time() . '_' . $file->getClientOriginalName();
 
-        //     // Inisialisasi Google Cloud Storage
-        //     $storage = new StorageClient([
-        //         'keyFilePath' => base_path('app/firebase/dafaq-542a5-firebase-adminsdk-nezyi-2e2d42888b.json'),
-        //     ]);
+            // Inisialisasi Google Cloud Storage
+            $storage = new StorageClient([
+                'keyFilePath' => base_path('app/firebase/dafaq-542a5-firebase-adminsdk-nezyi-2e2d42888b.json'),
+            ]);
 
-        //     $bucketName = env('FIREBASE_STORAGE_BUCKET', 'dafaq-542a5.appspot.com');
-        //     $bucket = $storage->bucket($bucketName);
+            $bucketName = env('FIREBASE_STORAGE_BUCKET', 'dafaq-542a5.appspot.com');
+            $bucket = $storage->bucket($bucketName);
 
-        //     // Upload file ke Firebase Storage
-        //     $bucket->upload(
-        //         fopen($file->getRealPath(), 'r'),
-        //         [
-        //             'name' => $fileName,
-        //         ]
-        //     );
+            // Upload file ke Firebase Storage
+            $bucket->upload(
+                fopen($file->getRealPath(), 'r'),
+                [
+                    'name' => $fileName,
+                ]
+            );
 
-        //     // Buat file publik
-        //     $object = $bucket->object($fileName);
-        //     $object->update(['acl' => []], ['predefinedAcl' => 'publicRead']);
+            // Buat file publik
+            $object = $bucket->object($fileName);
+            $object->update(['acl' => []], ['predefinedAcl' => 'publicRead']);
 
-        //     // Dapatkan URL publik dan simpan di model Pemakaian
-        //     $fotoUrl = 'https://storage.googleapis.com/' . $bucketName . '/' . $fileName;
-        //     $pemakaian->foto_meteran = $fotoUrl;
-        //     $pemakaian->save();
-        // }
+            // Dapatkan URL publik dan simpan di model Pemakaian
+            $fotoUrl = 'https://storage.googleapis.com/' . $bucketName . '/' . $fileName;
+            $pemakaian->foto_meteran = $fotoUrl;
+            $pemakaian->save();
+        }
 
         // Hitung tagihan berdasarkan pemakaian
         $billDetails = $this->calculateBill($pemakaian->jumlah_pemakaian);
@@ -147,6 +148,7 @@ class PemakaianController extends Controller
             'id_users' => 'required|exists:users,id_users',
             'meter_awal' => 'required|numeric',
             'meter_akhir' => 'required|numeric|gte:meter_awal',
+            'foto_meteran' => 'nullable|image', // Foto meteran opsional
         ], [
             'meter_awal.required' => 'Meter Awal Wajib Diisi!',
             'meter_awal.numeric' => 'Meter Awal Wajib di Isi Angka!',
@@ -162,11 +164,41 @@ class PemakaianController extends Controller
         $pemakaian->meter_akhir = $request->meter_akhir;
         $pemakaian->jumlah_pemakaian = $pemakaian->meter_akhir - $pemakaian->meter_awal;
         $pemakaian->waktu_catat = now();
-        $pemakaian->petugas = Auth::user()->nama ?? 'Default';
-        $pemakaian->foto_meteran = null; // or some default URL
+        $pemakaian->petugas = $request->id_petugas;  
         
         // Simpan pemakaian terlebih dahulu untuk mendapatkan ID
         $pemakaian->save();
+        
+        //Upload foto ke Firebase jika ada
+        if ($request->hasFile('foto_meteran')) {
+            $file = $request->file('foto_meteran');
+            $fileName = 'foto_meteran/' . $pemakaian->id_pemakaian . '/' . time() . '_' . $file->getClientOriginalName();
+
+            // Inisialisasi Google Cloud Storage
+            $storage = new StorageClient([
+                'keyFilePath' => base_path('app/firebase/dafaq-542a5-firebase-adminsdk-nezyi-2e2d42888b.json'),
+            ]);
+
+            $bucketName = env('FIREBASE_STORAGE_BUCKET', 'dafaq-542a5.appspot.com');
+            $bucket = $storage->bucket($bucketName);
+
+            // Upload file ke Firebase Storage
+            $bucket->upload(
+                fopen($file->getRealPath(), 'r'),
+                [
+                    'name' => $fileName,
+                ]
+            );
+
+            // Buat file publik
+            $object = $bucket->object($fileName);
+            $object->update(['acl' => []], ['predefinedAcl' => 'publicRead']);
+
+            // Dapatkan URL publik dan simpan di model Pemakaian
+            $fotoUrl = 'https://storage.googleapis.com/' . $bucketName . '/' . $fileName;
+            $pemakaian->foto_meteran = $fotoUrl;
+            $pemakaian->save();
+        }
     
         // Hitung tagihan berdasarkan pemakaian dari data pencatatan
         $billDetails = $this->calculateBill($pemakaian->jumlah_pemakaian);
@@ -237,23 +269,19 @@ class PemakaianController extends Controller
                     'December' => 'Desember'
                 ];
     
-                $pemakaian = $transaksi->pemakaian;
-                $petugas = $pemakaian ? $pemakaian->petugas : 'Unknown';
+                $pemakaian = $transaksi->pemakaian; 
+                
+                $namaPetugas = User::findOrFail($pemakaian->petugas)->nama;
     
                 $bulanTeks = $bulanIndonesia[$bulan] ?? $bulan;
-                $keterangan = "Terima bayar {$bulanTeks} {$tahun} oleh petugas {$petugas}";
-    
+                $keterangan = "Terima bayar {$bulanTeks} {$tahun} oleh petugas {$namaPetugas}";
+     
                 $existingLaporan = Laporan::where('keterangan', $keterangan)->first();
     
                 if ($existingLaporan) {
                     $existingLaporan->uang_masuk += $transaksi->jumlah_rp;
                     $existingLaporan->save();
-                } else {
-                    // Laporan::create([
-                    //     'tanggal' => now(),
-                    //     'uang_masuk' => $transaksi->jumlah_rp,
-                    //     'keterangan' => $keterangan
-                    // ]);
+                } else { 
                     $laporan = new Laporan();
                     $laporan->tanggal = now(); // Tetap menggunakan tanggal hari ini untuk field tanggal
                     $laporan->uang_masuk = $transaksi->jumlah_rp;
