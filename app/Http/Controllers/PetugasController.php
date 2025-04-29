@@ -22,7 +22,7 @@ class PetugasController extends Controller
     $data = Users::findOrFail($id);
 
     // Initialize query for pemakaian records using the officer's name
-    $pemakaianQuery = Pemakaian::where('petugas', $data->nama);
+    $pemakaianQuery = Pemakaian::where('petugas', $data->id_users);
 
     // Filter by month if provided
     if ($request->has('end_date')) {

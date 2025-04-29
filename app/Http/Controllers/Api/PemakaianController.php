@@ -63,11 +63,10 @@ class PemakaianController extends Controller
     {
         // Validasi data input
         $validated = $request->validate([
-            'id_users' => 'required|exists:users,id_users',
-            'id_petugas' => 'required|exists:users,id_users',
+            'id_users' => 'required|exists:users,id_users', 
             'meter_awal' => 'required|numeric',
             'meter_akhir' => 'required|numeric|gte:meter_awal',
-            'foto_meteran' => 'nullable|image', // Foto meteran opsional
+            // 'foto_meteran' => 'nullable|image', // Foto meteran opsional
         ], [
             'meter_awal.required' => 'Meter Awal Wajib Diisi!',
             'meter_awal.numeric' => 'Meter Awal Wajib di Isi Angka!',
@@ -83,8 +82,8 @@ class PemakaianController extends Controller
         $pemakaian->meter_akhir = $request->meter_akhir;
         $pemakaian->jumlah_pemakaian = $pemakaian->meter_akhir - $pemakaian->meter_awal;
         $pemakaian->waktu_catat = now();
-        $pemakaian->petugas = $request->id_petugas; 
-        // $pemakaian->foto_meteran = null;
+        $pemakaian->petugas = Auth::user()->id_users;
+        $pemakaian->foto_meteran = null;
 
         // Simpan pemakaian
         $pemakaian->save();
@@ -148,7 +147,7 @@ class PemakaianController extends Controller
             'id_users' => 'required|exists:users,id_users',
             'meter_awal' => 'required|numeric',
             'meter_akhir' => 'required|numeric|gte:meter_awal',
-            'foto_meteran' => 'nullable|image', // Foto meteran opsional
+            // 'foto_meteran' => 'nullable|image', // Foto meteran opsional
         ], [
             'meter_awal.required' => 'Meter Awal Wajib Diisi!',
             'meter_awal.numeric' => 'Meter Awal Wajib di Isi Angka!',
@@ -164,7 +163,7 @@ class PemakaianController extends Controller
         $pemakaian->meter_akhir = $request->meter_akhir;
         $pemakaian->jumlah_pemakaian = $pemakaian->meter_akhir - $pemakaian->meter_awal;
         $pemakaian->waktu_catat = now();
-        $pemakaian->petugas = $request->id_petugas;  
+        $pemakaian->petugas = Auth::user()->id_users;
         
         // Simpan pemakaian terlebih dahulu untuk mendapatkan ID
         $pemakaian->save();
@@ -271,10 +270,11 @@ class PemakaianController extends Controller
     
                 $pemakaian = $transaksi->pemakaian; 
                 
-                $namaPetugas = User::findOrFail($pemakaian->petugas)->nama;
-    
+                // Get the petugas value - you might need to adjust this based on your exact relationship
+                $petugas = $pemakaian ? $pemakaian->petugas : 'Unknown';
+        
                 $bulanTeks = $bulanIndonesia[$bulan] ?? $bulan;
-                $keterangan = "Terima bayar {$bulanTeks} {$tahun} oleh petugas {$namaPetugas}";
+                $keterangan = "Terima bayar {$bulanTeks} {$tahun} oleh petugas {$petugas}";
      
                 $existingLaporan = Laporan::where('keterangan', $keterangan)->first();
     

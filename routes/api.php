@@ -3,14 +3,18 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\PemakaianController;
+use App\Http\Controllers\Api\PemakaianController;  
 
 
-//Route Api Pemakaian
+//Route Api Pemakaian 
 Route::get('/pemakaian', [PemakaianController::class, 'indexPemakaian']);
-Route::post('/pemakaian/store', [PemakaianController::class, 'store']);  
-Route::post('/pemakaian/bayar', [PemakaianController::class, 'bayar']); 
 Route::put('/transaksi/bayar/{id_transaksi}', [PemakaianController::class, 'update']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/pemakaian/store', [PemakaianController::class, 'store']);  
+    Route::post('/pemakaian/bayar', [PemakaianController::class, 'bayar']); 
+});
+
 
 //Route Api Auth
 Route::prefix('auth')->group(function () {
