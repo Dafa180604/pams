@@ -200,7 +200,7 @@ class PemakaianController extends Controller
         $pemakaian->meter_akhir = $request->meter_akhir;
         $pemakaian->jumlah_pemakaian = $pemakaian->meter_akhir - $pemakaian->meter_awal;
         $pemakaian->waktu_catat = now();
-        $pemakaian->petugas = Auth::user()->nama;
+        $pemakaian->petugas = Auth::user()->id_users;
         $pemakaian->foto_meteran = null; // or some default URL
         
         // Simpan pemakaian terlebih dahulu untuk mendapatkan ID
@@ -282,7 +282,7 @@ class PemakaianController extends Controller
         $pemakaian->meter_akhir = $request->meter_akhir;
         $pemakaian->jumlah_pemakaian = $pemakaian->meter_akhir - $pemakaian->meter_awal;
         $pemakaian->waktu_catat = now();
-        $pemakaian->petugas = Auth::user()->nama;
+        $pemakaian->petugas = Auth::user()->id_users;
         $pemakaian->foto_meteran = null; // or some default URL
         
         // Simpan pemakaian terlebih dahulu untuk mendapatkan ID
