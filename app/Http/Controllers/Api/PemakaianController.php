@@ -11,6 +11,8 @@ use App\Models\Users;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Transaksi;
 use Google\Cloud\Storage\StorageClient;
+use Illuminate\Support\Facades\Log;
+use App\Models\Laporan;
 
 class PemakaianController extends Controller
 {
@@ -61,9 +63,10 @@ class PemakaianController extends Controller
     {
         // Validasi data input
         $validated = $request->validate([
+            'id_users' => 'required|exists:users,id_users',
             'meter_awal' => 'required|numeric',
             'meter_akhir' => 'required|numeric|gte:meter_awal',
-            'foto_meteran' => 'nullable|image', // Foto meteran opsional
+            // 'foto_meteran' => 'nullable|image', // Foto meteran opsional
         ], [
             'meter_awal.required' => 'Meter Awal Wajib Diisi!',
             'meter_awal.numeric' => 'Meter Awal Wajib di Isi Angka!',
@@ -74,47 +77,47 @@ class PemakaianController extends Controller
 
         // Membuat data pemakaian baru
         $pemakaian = new Pemakaian();
-        $pemakaian->id_users = $request->user_id;  // Gantilah 'user_id' sesuai parameter
+        $pemakaian->id_users = $request->id_users;  // Gantilah 'user_id' sesuai parameter
         $pemakaian->meter_awal = $request->meter_awal;
         $pemakaian->meter_akhir = $request->meter_akhir;
         $pemakaian->jumlah_pemakaian = $pemakaian->meter_akhir - $pemakaian->meter_awal;
         $pemakaian->waktu_catat = now();
-        $pemakaian->petugas = Auth::user()->nama;
+        $pemakaian->petugas = Auth::user()->nama ?? 'Petugas Default'; 
         $pemakaian->foto_meteran = null;
 
         // Simpan pemakaian
         $pemakaian->save();
 
         // Upload foto ke Firebase jika ada
-        if ($request->hasFile('foto_meteran')) {
-            $file = $request->file('foto_meteran');
-            $fileName = 'foto_meteran/' . $pemakaian->id_pemakaian . '/' . time() . '_' . $file->getClientOriginalName();
+        // if ($request->hasFile('foto_meteran')) {
+        //     $file = $request->file('foto_meteran');
+        //     $fileName = 'foto_meteran/' . $pemakaian->id_pemakaian . '/' . time() . '_' . $file->getClientOriginalName();
 
-            // Inisialisasi Google Cloud Storage
-            $storage = new StorageClient([
-                'keyFilePath' => base_path('app/firebase/dafaq-542a5-firebase-adminsdk-nezyi-2e2d42888b.json'),
-            ]);
+        //     // Inisialisasi Google Cloud Storage
+        //     $storage = new StorageClient([
+        //         'keyFilePath' => base_path('app/firebase/dafaq-542a5-firebase-adminsdk-nezyi-2e2d42888b.json'),
+        //     ]);
 
-            $bucketName = env('FIREBASE_STORAGE_BUCKET', 'dafaq-542a5.appspot.com');
-            $bucket = $storage->bucket($bucketName);
+        //     $bucketName = env('FIREBASE_STORAGE_BUCKET', 'dafaq-542a5.appspot.com');
+        //     $bucket = $storage->bucket($bucketName);
 
-            // Upload file ke Firebase Storage
-            $bucket->upload(
-                fopen($file->getRealPath(), 'r'),
-                [
-                    'name' => $fileName,
-                ]
-            );
+        //     // Upload file ke Firebase Storage
+        //     $bucket->upload(
+        //         fopen($file->getRealPath(), 'r'),
+        //         [
+        //             'name' => $fileName,
+        //         ]
+        //     );
 
-            // Buat file publik
-            $object = $bucket->object($fileName);
-            $object->update(['acl' => []], ['predefinedAcl' => 'publicRead']);
+        //     // Buat file publik
+        //     $object = $bucket->object($fileName);
+        //     $object->update(['acl' => []], ['predefinedAcl' => 'publicRead']);
 
-            // Dapatkan URL publik dan simpan di model Pemakaian
-            $fotoUrl = 'https://storage.googleapis.com/' . $bucketName . '/' . $fileName;
-            $pemakaian->foto_meteran = $fotoUrl;
-            $pemakaian->save();
-        }
+        //     // Dapatkan URL publik dan simpan di model Pemakaian
+        //     $fotoUrl = 'https://storage.googleapis.com/' . $bucketName . '/' . $fileName;
+        //     $pemakaian->foto_meteran = $fotoUrl;
+        //     $pemakaian->save();
+        // }
 
         // Hitung tagihan berdasarkan pemakaian
         $billDetails = $this->calculateBill($pemakaian->jumlah_pemakaian);
@@ -136,47 +139,65 @@ class PemakaianController extends Controller
         ], 201); // Response berhasil ditambahkan dengan status 201
     }
 
-    // Method untuk form pembayaran
-    public function bayar(Request $request, $id)
+    // Method untuk form 
+    public function bayar(Request $request)
     {
-        // Validasi input
-        $validated = $request->validate([
+        // Validasi data input
+        $request->validate([
+            'id_users' => 'required|exists:users,id_users',
             'meter_awal' => 'required|numeric',
             'meter_akhir' => 'required|numeric|gte:meter_awal',
-            'foto_meteran' => 'nullable|image', // Foto meteran opsional
+        ], [
+            'meter_awal.required' => 'Meter Awal Wajib Diisi!',
+            'meter_awal.numeric' => 'Meter Awal Wajib di Isi Angka!',
+            'meter_akhir.required' => 'Meter Akhir Wajib Diisi!',
+            'meter_akhir.numeric' => 'Meter Akhir Wajib di Isi Angka!',
+            'meter_akhir.gte' => 'Meter Akhir Tidak Boleh Lebih Kecil dari Meter Awal!',
         ]);
-
-        // Temukan pemakaian berdasarkan ID
-        $pemakaian = Pemakaian::find($id);
-        if (!$pemakaian) {
-            return response()->json(['message' => 'Pemakaian tidak ditemukan'], 404);
-        }
-
-        // Update pemakaian data
+    
+        // Membuat data pemakaian baru
+        $pemakaian = new Pemakaian();
+        $pemakaian->id_users = $request->id_users;
         $pemakaian->meter_awal = $request->meter_awal;
         $pemakaian->meter_akhir = $request->meter_akhir;
         $pemakaian->jumlah_pemakaian = $pemakaian->meter_akhir - $pemakaian->meter_awal;
         $pemakaian->waktu_catat = now();
+        $pemakaian->petugas = Auth::user()->nama ?? 'Default';
+        $pemakaian->foto_meteran = null; // or some default URL
+        
+        // Simpan pemakaian terlebih dahulu untuk mendapatkan ID
         $pemakaian->save();
-
-        // Hitung tagihan berdasarkan pemakaian
+    
+        // Hitung tagihan berdasarkan pemakaian dari data pencatatan
         $billDetails = $this->calculateBill($pemakaian->jumlah_pemakaian);
-
+    
         // Membuat data transaksi baru
         $transaksi = new Transaksi();
         $transaksi->id_pemakaian = $pemakaian->id_pemakaian;
         $transaksi->id_beban_biaya = $billDetails['beban_id'];
         $transaksi->id_kategori_biaya = $billDetails['kategori_id'];
-        $transaksi->tgl_pembayaran = now();
         $transaksi->jumlah_rp = $billDetails['total'];
         $transaksi->status_pembayaran = $request->status_pembayaran ?? 'Belum Bayar';
         $transaksi->detail_biaya = json_encode($billDetails['detail']);
         $transaksi->save();
-
+    
+        // Ambil data untuk response API
+        $data = Transaksi::with(['pemakaian.users'])->find($transaksi->id_transaksi);
+    
+        // Return response dengan format yang diinginkan
         return response()->json([
-            'message' => 'Pembayaran berhasil diproses.',
-            'data' => $transaksi
-        ], 200); // Response berhasil dengan status 200
+            'success' => true,
+            'message' => 'Data pemakaian dan transaksi berhasil dibuat',
+            'data' => [
+                'id_pelanggan' => $data->pemakaian->users->id_users,
+                'id_transaksi' => $transaksi->id_transaksi,
+                'meter_awal' => $data->pemakaian->meter_awal,
+                'meter_akhir' => $data->pemakaian->meter_akhir,
+                'jumlah_pemakaian' => $data->pemakaian->jumlah_pemakaian,
+                'detail_biaya' => json_decode($data->detail_biaya),
+                'total_tagihan' => $data->jumlah_rp,
+            ]
+        ],201);
     }
     
     // Methid untuk store pembayaran
@@ -184,34 +205,23 @@ class PemakaianController extends Controller
     {
         $request->validate([
             'uang_bayar' => 'required|numeric',
-        ], [
-            'uang_bayar.required' => 'Jumlah uang bayar wajib diisi!',
-            'uang_bayar.numeric' => 'Jumlah uang bayar harus berupa angka!',
         ]);
     
         try {
-            // Find the existing transaction
             $transaksi = Transaksi::findOrFail($id_transaksi);
     
-            // Calculate kembalian (change)
             $kembalian = $request->uang_bayar - $transaksi->jumlah_rp;
     
-            // Update the transaction attributes
             $transaksi->tgl_pembayaran = now();
             $transaksi->status_pembayaran = $request->status_pembayaran ?? 'Lunas';
             $transaksi->uang_bayar = $request->uang_bayar;
             $transaksi->kembalian = $kembalian;
-    
-            // Save the updated transaction
             $transaksi->save();
     
-            // If the payment status is 'Lunas', add to the report table
             if ($transaksi->status_pembayaran == 'Lunas') {
-                // Get the current month and year
-                $bulan = date('F'); // English month name
+                $bulan = date('F');
                 $tahun = date('Y');
     
-                // Convert month name to Indonesian
                 $bulanIndonesia = [
                     'January' => 'Januari',
                     'February' => 'Februari',
@@ -227,46 +237,48 @@ class PemakaianController extends Controller
                     'December' => 'Desember'
                 ];
     
-                // Get petugas from the related Pemakaian record
                 $pemakaian = $transaksi->pemakaian;
                 $petugas = $pemakaian ? $pemakaian->petugas : 'Unknown';
     
-                // Prepare report text in Indonesian
                 $bulanTeks = $bulanIndonesia[$bulan] ?? $bulan;
                 $keterangan = "Terima bayar {$bulanTeks} {$tahun} oleh petugas {$petugas}";
     
-                // Check if a report for the same month and year already exists
                 $existingLaporan = Laporan::where('keterangan', $keterangan)->first();
     
                 if ($existingLaporan) {
-                    // If report exists, update the amount
                     $existingLaporan->uang_masuk += $transaksi->jumlah_rp;
                     $existingLaporan->save();
                 } else {
-                    // If no report exists, create a new one
+                    // Laporan::create([
+                    //     'tanggal' => now(),
+                    //     'uang_masuk' => $transaksi->jumlah_rp,
+                    //     'keterangan' => $keterangan
+                    // ]);
                     $laporan = new Laporan();
-                    $laporan->tanggal = now();
+                    $laporan->tanggal = now(); // Tetap menggunakan tanggal hari ini untuk field tanggal
                     $laporan->uang_masuk = $transaksi->jumlah_rp;
                     $laporan->keterangan = $keterangan;
                     $laporan->save();
                 }
             }
     
-            // Return a response with success and receipt URL
-            $cetakUrl = route('lunas.cetak', ['id_transaksi' => $id_transaksi]);
-    
             return response()->json([
+                'success' => true,
                 'message' => 'Pembayaran berhasil diproses.',
-                'cetakUrl' => $cetakUrl
+                'data' => [
+                    'transaksi' => $transaksi
+                ]
             ], 200);
     
         } catch (\Exception $e) {
-            // Return an error response if there's an exception
             return response()->json([
-                'error' => 'Terjadi kesalahan: ' . $e->getMessage()
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage(),
+                'data' => null
             ], 500);
         }
     }
+
 
     
     //Perhitungan

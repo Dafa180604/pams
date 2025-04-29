@@ -8,9 +8,9 @@ use App\Http\Controllers\Api\PemakaianController;
 
 //Route Api Pemakaian
 Route::get('/pemakaian', [PemakaianController::class, 'indexPemakaian']);
-Route::post('/pemakaian/store', [PemakaianControllerApi::class, 'store']);  
-Route::post('/pemakaian/{id}/bayar', [PemakaianControllerApi::class, 'bayar']);  
-Route::put('/pemakaian/{id}/bayar/{id_transaksi}', [PemakaianControllerApi::class, 'update']);
+Route::post('/pemakaian/store', [PemakaianController::class, 'store']);  
+Route::post('/pemakaian/bayar', [PemakaianController::class, 'bayar']); 
+Route::put('/transaksi/bayar/{id_transaksi}', [PemakaianController::class, 'update']);
 
 //Route Api Auth
 Route::prefix('auth')->group(function () {
