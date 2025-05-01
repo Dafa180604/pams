@@ -16,30 +16,35 @@ use App\Models\Laporan;
 
 class PemakaianController extends Controller
 {
-    // Method untuk menampilkan pemakaian
     public function indexPemakaian(Request $request)
     {
-        $perPage = $request->get('per_page', 10); // default 10 jika tidak dikirim dari client
-        $search = $request->get('search'); // menangkap parameter pencarian dari query string
-    
+        $perPage = $request->get('per_page', 10); // default 10
+        $search = $request->get('search');
+        $userId = $request->get('id_users'); // tangkap id dari query jika ada
+
         $query = Users::where('role', 'pelanggan');
-    
-        // Tambahkan kondisi pencarian jika search tidak kosong
+
+        // Jika ada pencarian berdasarkan nama/alamat/no_hp
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('nama', 'like', "%{$search}%")
-                  ->orWhere('alamat', 'like', "%{$search}%")
-                  ->orWhere('no_hp', 'like', "%{$search}%");
+                ->orWhere('alamat', 'like', "%{$search}%")
+                ->orWhere('no_hp', 'like', "%{$search}%");
             });
         }
-    
+
+        // Jika ada pencarian berdasarkan id_users
+        if ($userId) {
+            $query->where('id_users', $userId);
+        }
+
         $users = $query->paginate($perPage);
-    
-        // Mapping data user dengan tambahan meter_akhir
+
+        // Mapping data user
         $mapped = $users->getCollection()->map(function ($user) {
             $penggunaanTerakhir = Pemakaian::where('id_users', $user->id_users)->latest()->first();
             $defaultValue = $user->jumlah_air ?? 0;
-    
+
             return [
                 'id_users' => $user->id_users,
                 'nama' => $user->nama,
@@ -52,11 +57,18 @@ class PemakaianController extends Controller
                 'waktu_catat' => $penggunaanTerakhir ? $penggunaanTerakhir->waktu_catat : null,
             ];
         });
-    
+
+        // Set kembali collection hasil map
         $users->setCollection($mapped);
-    
-        return response()->json($users);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Data pemakaian berhasil diambil',
+            'data' => $users
+        ]);
     }
+
+
     
     // Method untuk menyimpan data pemakaian
     public function store(Request $request)
@@ -232,14 +244,15 @@ class PemakaianController extends Controller
     }
     
     // Methid untuk store pembayaran
-    public function update(Request $request, string $id_transaksi)
+    public function update(Request $request)
     {
         $request->validate([
-            'uang_bayar' => 'required|numeric',
+            'id_transaksi' => 'required',
+            'uang_bayar' => 'required|numeric'
         ]);
     
         try {
-            $transaksi = Transaksi::findOrFail($id_transaksi);
+            $transaksi = Transaksi::findOrFail($request->id_transaksi);
     
             $kembalian = $request->uang_bayar - $transaksi->jumlah_rp;
     
@@ -289,12 +302,25 @@ class PemakaianController extends Controller
                     $laporan->save();
                 }
             }
-    
+
             return response()->json([
                 'success' => true,
                 'message' => 'Pembayaran berhasil diproses.',
                 'data' => [
-                    'transaksi' => $transaksi
+                    'id_transaksi' => $transaksi->id_transaksi,
+                    'nama_petugas' => Auth::user()->nama ?? 'Unknown',
+                    'tanggal_pencatatan' => $transaksi->pemakaian->waktu_catat ?? null,
+                    'tanggal_pembayaran' => $transaksi->tgl_pembayaran ? $transaksi->tgl_pembayaran->format('Y-m-d H:i:s') : null,
+            
+                    'meter_awal' => $transaksi->pemakaian->meter_awal ?? null,
+                    'meter_akhir' => $transaksi->pemakaian->meter_akhir ?? null,
+                    'jumlah_pemakaian' => $transaksi->pemakaian->jumlah_pemakaian ?? null,
+            
+                    'denda' => $transaksi->rp_denda ?? 0,
+                    'detail_biaya' => json_decode($transaksi->detail_biaya, true),
+                    'total_tagihan' => $transaksi->jumlah_rp,
+                    'jumlah_bayar' => $transaksi->uang_bayar,
+                    'kembalian' => $transaksi->kembalian
                 ]
             ], 200);
     

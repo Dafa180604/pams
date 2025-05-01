@@ -4,17 +4,23 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\PemakaianController;  
+use App\Http\Controllers\Api\DashboardController;  
+use App\Http\Controllers\Api\KeluhanController;  
 
+
+//Route Api Keluahan 
+Route::get('/keluhan', [KeluhanController::class, 'indexKeluhan']);
 
 //Route Api Pemakaian 
 Route::get('/pemakaian', [PemakaianController::class, 'indexPemakaian']);
-Route::put('/transaksi/bayar/{id_transaksi}', [PemakaianController::class, 'update']);
-
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/pemakaian/store', [PemakaianController::class, 'store']);  
-    Route::post('/pemakaian/bayar', [PemakaianController::class, 'bayar']); 
+    Route::post('/pemakaian/bayar/langsung', [PemakaianController::class, 'bayar']); 
+    Route::put('/pemakaian/bayar/lunas', [PemakaianController::class, 'update']);
 });
 
+//Route Api Data Dashboard
+Route::middleware(['auth:sanctum'])->get('/dashboard/petugas', [DashboardController::class, 'dataDashboardPetugas']);
 
 //Route Api Auth
 Route::prefix('auth')->group(function () {

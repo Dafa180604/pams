@@ -23,7 +23,7 @@ class petugasSeeder extends Seeder
             'username' => 'dafa@gmail.com',     
             'no_hp' => substr($faker->unique()->phoneNumber, 0, 13),
             'role' => 'petugas',
-            'password' => bcrypt('SumberSehat'),
+            'password' => bcrypt('dafa@gmail.com'),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -36,7 +36,7 @@ class petugasSeeder extends Seeder
             'username' => 'mahfudi@gmail.com',   
             'no_hp' => substr($faker->unique()->phoneNumber, 0, 13),
             'role' => 'petugas',
-            'password' => bcrypt('SumberSehat'),
+            'password' => bcrypt('mahfudi@gmail.com'),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -49,7 +49,7 @@ class petugasSeeder extends Seeder
             'username' => 'ngatemin@gmail.com', 
             'no_hp' => substr($faker->unique()->phoneNumber, 0, 13),
             'role' => 'petugas',
-            'password' => bcrypt('SumberSehat'),
+            'password' => bcrypt('ngatemin@gmail.com'),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -62,7 +62,7 @@ class petugasSeeder extends Seeder
             'username' => 'udhik@gmail.com',
             'no_hp' => substr($faker->unique()->phoneNumber, 0, 13),
             'role' => 'petugas',
-            'password' => bcrypt('SumberSehat'),
+            'password' => bcrypt('udhik@gmail.com'),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -75,7 +75,7 @@ class petugasSeeder extends Seeder
             'username' => 'imam@gmail.com',
             'no_hp' => substr($faker->unique()->phoneNumber, 0, 13),
             'role' => 'petugas',
-            'password' => bcrypt('SumberSehat'),
+            'password' => bcrypt('imam@gmail.com'),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
