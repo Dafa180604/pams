@@ -18,19 +18,40 @@ class PemakaianController extends Controller
      */
     public function index()
     {
-        $dataPelanggan = Users::where('role', 'pelanggan')->get()->map(function ($user) {
-            // Ambil data penggunaan terakhir berdasarkan id_users
-            $penggunaanTerakhir = Pemakaian::where('id_users', $user->id_users)->latest()->first();
-    
-            // Ambil nilai jumlah_air dari tabel users
-            $defaultValue = $user->jumlah_air ?? 0;
-    
-            // Tambahkan atribut meter_akhir ke objek user
-            $user->meter_akhir = $penggunaanTerakhir ? $penggunaanTerakhir->meter_akhir : $defaultValue;
-    
-            return $user;
-        });
-    
+        // Ambil data user yang sedang login (petugas)
+        $petugas = auth()->user();
+
+        // Pastikan user yang login adalah petugas
+        if ($petugas->role != 'petugas') {
+            // Redirect atau tampilkan error jika bukan petugas
+            return redirect()->back()->with('error', 'Anda tidak memiliki akses ke halaman ini');
+        }
+
+        // Ambil akses_pelanggan dari petugas yang login
+        $aksesPelanggan = json_decode($petugas->akses_pelanggan ?? '[]', true);
+
+        // Jika tidak ada akses pelanggan, berikan array kosong
+        if (empty($aksesPelanggan)) {
+            return view('pemakaian.index', ['dataPelanggan' => collect([])]);
+        }
+
+        // Query pelanggan yang hanya terdapat dalam akses_pelanggan
+        $dataPelanggan = Users::where('role', 'pelanggan')
+            ->whereIn('id_users', $aksesPelanggan)
+            ->get()
+            ->map(function ($user) {
+                // Ambil data penggunaan terakhir berdasarkan id_users
+                $penggunaanTerakhir = Pemakaian::where('id_users', $user->id_users)->latest()->first();
+
+                // Ambil nilai jumlah_air dari tabel users
+                $defaultValue = $user->jumlah_air ?? 0;
+
+                // Tambahkan atribut meter_akhir ke objek user
+                $user->meter_akhir = $penggunaanTerakhir ? $penggunaanTerakhir->meter_akhir : $defaultValue;
+
+                return $user;
+            });
+
         return view('pemakaian.index', ['dataPelanggan' => $dataPelanggan]);
     }
 
@@ -68,14 +89,14 @@ class PemakaianController extends Controller
             })
             ->toArray();
     }
-    
+
     private static function calculateBill(float $pemakaian): array
     {
         // Ambil nilai beban dari database
         $beban = self::getBeban();
         $bebanBiaya = $beban ? $beban['tarif'] : 0;
         $bebanId = $beban ? $beban['id'] : null;
-    
+
         // Jika pemakaian 0, hanya mengenakan biaya beban
         if ($pemakaian <= 0) {
             return [
@@ -91,10 +112,10 @@ class PemakaianController extends Controller
                 ]
             ];
         }
-    
+
         // Ambil kategori biaya dari database
         $kategori = self::getKategoriBiaya();
-    
+
         // Jika tidak ada kategori biaya, return hanya biaya beban
         if (empty($kategori)) {
             return [
@@ -110,25 +131,25 @@ class PemakaianController extends Controller
                 ]
             ];
         }
-    
+
         $total = $bebanBiaya;
         $sisaPemakaian = $pemakaian;
         $lastUsedKategoriId = null;
         $kategoriSnapshot = [];
         $lastKategori = end($kategori);
         reset($kategori);
-    
+
         foreach ($kategori as $index => $tarif) {
             $min = $tarif['min'];
             $max = $tarif['max'];
             $rate = $tarif['rate'];
-    
+
             if ($sisaPemakaian <= 0 || $pemakaian < $min) {
                 break;
             }
-    
+
             $volume = 0;
-    
+
             if ($index == 0) {
                 $volume = min($max, $pemakaian);
             } else {
@@ -142,12 +163,12 @@ class PemakaianController extends Controller
                     }
                 }
             }
-    
+
             if ($volume > 0) {
                 $subtotal = $volume * $rate;
                 $total += $subtotal;
                 $lastUsedKategoriId = $tarif['id'];
-                
+
                 // Simpan detail kategori untuk snapshot
                 $kategoriSnapshot[] = [
                     'id_kategori' => $tarif['id'],
@@ -158,10 +179,10 @@ class PemakaianController extends Controller
                     'subtotal' => $subtotal
                 ];
             }
-    
+
             $sisaPemakaian -= $volume;
         }
-    
+
         return [
             'total' => $total,
             'beban_id' => $bebanId,
@@ -175,7 +196,7 @@ class PemakaianController extends Controller
             ]
         ];
     }
-    
+
     public function store(Request $request)
     {
         // Validasi data input
@@ -202,7 +223,7 @@ class PemakaianController extends Controller
         $pemakaian->waktu_catat = now();
         $pemakaian->petugas = Auth::user()->id_users;
         $pemakaian->foto_meteran = null; // or some default URL
-        
+
         // Simpan pemakaian terlebih dahulu untuk mendapatkan ID
         $pemakaian->save();
 
@@ -249,10 +270,10 @@ class PemakaianController extends Controller
         $transaksi->tgl_pembayaran = null;
         $transaksi->jumlah_rp = $billDetails['total'];
         $transaksi->status_pembayaran = $request->status_pembayaran ?? 'Belum Bayar';
-        
+
         // Simpan detail perhitungan sebagai JSON
         $transaksi->detail_biaya = json_encode($billDetails['detail']);
-        
+
         $transaksi->save();
 
         return redirect()->route('pemakaian.index')->with('success', 'Data berhasil ditambahkan.');
@@ -284,7 +305,7 @@ class PemakaianController extends Controller
         $pemakaian->waktu_catat = now();
         $pemakaian->petugas = Auth::user()->id_users;
         $pemakaian->foto_meteran = null; // or some default URL
-        
+
         // Simpan pemakaian terlebih dahulu untuk mendapatkan ID
         $pemakaian->save();
 
@@ -331,10 +352,10 @@ class PemakaianController extends Controller
         $transaksi->tgl_pembayaran = null;
         $transaksi->jumlah_rp = $billDetails['total'];
         $transaksi->status_pembayaran = $request->status_pembayaran ?? 'Belum Bayar';
-        
+
         // Simpan detail perhitungan sebagai JSON
         $transaksi->detail_biaya = json_encode($billDetails['detail']);
-        
+
         $transaksi->save();
 
         // Selalu arahkan ke halaman pembayaran untuk metode bayar
@@ -389,29 +410,29 @@ class PemakaianController extends Controller
             'uang_bayar.required' => 'Jumlah uang bayar wajib diisi!',
             'uang_bayar.numeric' => 'Jumlah uang bayar harus berupa angka!',
         ]);
-    
+
         try {
             // Find the existing transaction
             $transaksi = Transaksi::findOrFail($id_transaksi);
-    
+
             // Calculate kembalian
             $kembalian = $request->uang_bayar - $transaksi->jumlah_rp;
-    
+
             // Update the attributes
             $transaksi->tgl_pembayaran = now();
             $transaksi->status_pembayaran = $request->status_pembayaran ?? 'Lunas';
             $transaksi->uang_bayar = $request->uang_bayar;
             $transaksi->kembalian = $kembalian;
-    
+
             // Save the changes to the existing record
             $transaksi->save();
-    
+
             // Jika status pembayaran adalah Lunas, tambahkan ke tabel laporan
             if ($transaksi->status_pembayaran == 'Lunas') {
                 // Dapatkan bulan dan tahun saat ini
                 $bulan = date('F'); // Nama bulan dalam bahasa Inggris
                 $tahun = date('Y');
-    
+
                 // Ubah nama bulan ke bahasa Indonesia jika diperlukan
                 $bulanIndonesia = [
                     'January' => 'Januari',
@@ -429,16 +450,16 @@ class PemakaianController extends Controller
                 ];
                 // Assuming there's a relationship between Transaksi and Pemakaian
                 $pemakaian = $transaksi->pemakaian; // Or however you access the related record
-    
+
                 // Get the petugas value - you might need to adjust this based on your exact relationship
                 $petugas = $pemakaian ? $pemakaian->petugas : 'Unknown';
-    
+
                 $bulanTeks = $bulanIndonesia[$bulan] ?? $bulan;
                 $keterangan = "Terima bayar {$bulanTeks} {$tahun} oleh petugas {$petugas}";
-    
+
                 // Cek apakah sudah ada laporan dengan bulan dan tahun yang sama
                 $existingLaporan = Laporan::where('keterangan', $keterangan)->first();
-    
+
                 if ($existingLaporan) {
                     // Jika sudah ada, update jumlah uang masuk
                     $existingLaporan->uang_masuk += $transaksi->jumlah_rp;
@@ -452,17 +473,17 @@ class PemakaianController extends Controller
                     $laporan->save();
                 }
             }
-    
+
             // Fetch the transaction data for the receipt view
             // Generate the print receipt URL
             $cetakUrl = route('lunas.cetak', ['id_transaksi' => $id_transaksi]);
-    
+
             // Redirect to index with success message and JavaScript to open receipt in new tab
             return redirect()->route('lunas.index')->with([
                 'pembayaran_berhasil' => 'Pembayaran berhasil diproses.',
                 'cetakUrl' => $cetakUrl
             ]);
-    
+
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }

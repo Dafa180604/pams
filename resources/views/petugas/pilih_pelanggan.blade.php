@@ -13,7 +13,20 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center flex-wrap mb-4">
                         <h4 class="mb-3 mb-md-2">Pilih Pelanggan untuk Petugas: {{ $petugas->nama }}</h4>
+                        
+                        <!-- Tombol Simpan Akses dipindahkan ke sini -->
+                        <form action="{{ route('petugas.updateAkses', $petugas->id_users) }}" method="POST" id="aksesPelangganForm">
+                            @csrf
+                            <!-- Input hidden untuk menyimpan state saat ini -->
+                            <div id="hiddenInputsContainer">
+                                @foreach($aksesPelanggan as $idPelanggan)
+                                    <input type="hidden" name="pelanggan_ids[]" value="{{ $idPelanggan }}">
+                                @endforeach
+                            </div>
+                            <button type="submit" class="btn btn-primary">Simpan Akses</button>
+                        </form>
                     </div>
+                    
                     {{-- Filter Form --}}
                     <form method="GET" action="" class="mb-4">
                         <div class="row">
@@ -54,49 +67,42 @@
                     </form>
 
                     {{-- Table Pelanggan --}}
-                    <form action="{{ route('petugas.updateAkses', $petugas->id_users) }}" method="POST">
-                        @csrf
-                        <div class="table-responsive">
-                            <table class="table">
-                            <table id="dataTableExample" class="table">
-                                <thead class="thead-dark">
+                    <div class="table-responsive">
+                        <table id="dataTableExample" class="table">
+                            <thead class="thead-dark">
+                                <tr>
+                                    <th>No</th>
+                                    <th>ID Pelanggan</th>
+                                    <th>Nama</th>
+                                    <th>Alamat</th>
+                                    <th>RW</th>
+                                    <th>RT</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($dataPelanggan as $index => $p)
                                     <tr>
-                                        <th>No</th>
-                                        <th>ID Pelanggan</th>
-                                        <th>Nama</th>
-                                        <th>Alamat</th>
-                                        <th>RW</th>
-                                        <th>RT</th>
-                                        <th>Aksi</th>
+                                        <td>{{ $index + 1 }}</td>
+                                        <td>{{ $p->id_users }}</td>
+                                        <td>{{ $p->nama }}</td>
+                                        <td>{{ $p->alamat }}</td>
+                                        <td>{{ $p->rw }}</td>
+                                        <td>{{ $p->rt }}</td>
+                                        <td>
+                                            <input type="checkbox" class="pelanggan-checkbox" 
+                                                data-id="{{ $p->id_users }}"
+                                                {{ in_array($p->id_users, $aksesPelanggan) ? 'checked' : '' }}>
+                                        </td>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    @forelse($dataPelanggan as $index => $p)
-                                        <tr>
-                                            <td>{{ $index + 1 }}</td>
-                                            <td>{{ $p->id_users }}</td>
-                                            <td>{{ $p->nama }}</td>
-                                            <td>{{ $p->alamat }}</td>
-                                            <td>{{ $p->rw }}</td>
-                                            <td>{{ $p->rt }}</td>
-                                            <td>
-                                                <input type="checkbox" name="pelanggan_ids[]" value="{{ $p->id_users }}"
-                                                    {{ in_array($p->id_users, $aksesPelanggan) ? 'checked' : '' }}>
-                                            </td>
-                                        </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="8" class="text-center">Data tidak ditemukan.</td>
-                                        </tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
-                            </table>
-                        </div>
-                        <div class="d-flex justify-content-end mt-3">
-                            <button type="submit" class="btn btn-primary">Simpan Akses</button>
-                        </div>
-                    </form>
+                                @empty
+                                    <tr>
+                                        <td colspan="8" class="text-center">Data tidak ditemukan.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -117,7 +123,35 @@
                 }
             });
         });
-    });
 
+        // Menangani checkboxes
+        const checkboxes = document.querySelectorAll('.pelanggan-checkbox');
+        const hiddenContainer = document.getElementById('hiddenInputsContainer');
+        
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const idPelanggan = this.getAttribute('data-id');
+                
+                // Cek apakah input hidden sudah ada untuk ID ini
+                const existingInput = hiddenContainer.querySelector(`input[value="${idPelanggan}"]`);
+                
+                if (this.checked) {
+                    // Jika checkbox dicentang dan belum ada input hidden, tambahkan
+                    if (!existingInput) {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'pelanggan_ids[]';
+                        input.value = idPelanggan;
+                        hiddenContainer.appendChild(input);
+                    }
+                } else {
+                    // Jika checkbox tidak dicentang dan ada input hidden, hapus
+                    if (existingInput) {
+                        existingInput.remove();
+                    }
+                }
+            });
+        });
+    });
 </script>
 @endsection
