@@ -17,9 +17,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/transaksi', [TransaksiController::class, 'index']); 
 });
 
-//Route Api Pemakaian 
-Route::get('/pemakaian', [PemakaianController::class, 'index']);
-Route::middleware('auth:sanctum')->group(function () {
+//Route Api Pemakaian
+Route::middleware('auth:sanctum')->group(function () { 
+    Route::get('/pemakaian', [PemakaianController::class, 'index']);
     Route::post('/pemakaian/store', [PemakaianController::class, 'store']);  
     Route::post('/pemakaian/bayar/langsung', [PemakaianController::class, 'bayar']); 
     Route::put('/pemakaian/bayar/lunas', [PemakaianController::class, 'update']);
