@@ -8,7 +8,7 @@ use App\Models\Keluhan;
 
 class KeluhanController extends Controller
 {
-    public function indexKeluhan(Request $request)
+    public function index(Request $request)
     {
         $search = $request->query('search');
         $perPage = $request->query('per_page', 10);

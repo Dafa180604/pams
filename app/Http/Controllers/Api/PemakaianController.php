@@ -16,7 +16,7 @@ use App\Models\Laporan;
 
 class PemakaianController extends Controller
 {
-    public function indexPemakaian(Request $request)
+    public function index(Request $request)
     {
         $perPage = $request->get('per_page', 10); // default 10
         $search = $request->get('search');

@@ -6,13 +6,19 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\PemakaianController;  
 use App\Http\Controllers\Api\DashboardController;  
 use App\Http\Controllers\Api\KeluhanController;  
+use App\Http\Controllers\Api\TransaksiController;  
 
 
 //Route Api Keluahan 
-Route::get('/keluhan', [KeluhanController::class, 'indexKeluhan']);
+Route::get('/keluhan', [KeluhanController::class, 'index']);
+
+//Route Api Transaksi
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/transaksi', [TransaksiController::class, 'index']); 
+});
 
 //Route Api Pemakaian 
-Route::get('/pemakaian', [PemakaianController::class, 'indexPemakaian']);
+Route::get('/pemakaian', [PemakaianController::class, 'index']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/pemakaian/store', [PemakaianController::class, 'store']);  
     Route::post('/pemakaian/bayar/langsung', [PemakaianController::class, 'bayar']); 
