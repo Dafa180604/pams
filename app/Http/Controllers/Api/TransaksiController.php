@@ -16,21 +16,32 @@ class TransaksiController extends Controller
     public function index(Request $request)
     { 
         $petugasId = Auth::user()->id_users;
-        $search = $request->input('status_pembayaran');
-        $currentMonth = now()->month;
-        $currentYear = now()->year;
+    $search = $request->input('search');  // Ambil input search secara umum
+    $currentMonth = now()->month;
+    $currentYear = now()->year;
 
-        $transaksi = Transaksi::with(['pemakaian.users'])
-            ->whereHas('pemakaian', function ($query) use ($petugasId) {
-                $query->where('petugas', $petugasId);
-            })
-            ->when($search, function ($query, $search) {
-                return $query->where('status_pembayaran', 'like', "%$search%");
-            })
-            ->whereMonth('created_at', $currentMonth)
-            ->whereYear('created_at', $currentYear)
-            ->orderBy('created_at', 'desc')
-            ->paginate(10);
+    $transaksi = Transaksi::with(['pemakaian.users'])
+        ->whereHas('pemakaian', function ($query) use ($petugasId) {
+            $query->where('petugas', $petugasId);
+        })
+        ->when($search, function ($query, $search) {
+            return $query->where(function ($q) use ($search) {
+                // Mencari berdasarkan status pembayaran
+                $q->orWhere('status_pembayaran', 'like', "%$search%")
+                  // Mencari berdasarkan nama pelanggan
+                  ->orWhereHas('pemakaian.users', function ($q) use ($search) {
+                      $q->where('nama', 'like', "%$search%");
+                  })
+                  // Mencari berdasarkan alamat pelanggan
+                  ->orWhereHas('pemakaian.users', function ($q) use ($search) {
+                      $q->where('alamat', 'like', "%$search%");
+                  })
+                  // Mencari berdasarkan tanggal pembayaran
+                  ->orWhereDate('tgl_pembayaran', 'like', "%$search%")
+                  // Mencari berdasarkan total tagihan
+                  ->orWhere('jumlah_rp', 'like', "%$search%");
+            });
+        });
 
         // Ambil hanya field yang diinginkan
         $data = $transaksi->getCollection()->map(function ($item) {
