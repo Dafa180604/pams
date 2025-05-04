@@ -15,6 +15,7 @@ Route::get('/keluhan', [KeluhanController::class, 'index']);
 //Route Api Transaksi
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/transaksi', [TransaksiController::class, 'index']); 
+    Route::get('/transaksi/{id}', [TransaksiController::class, 'show']); 
 });
 
 //Route Api Pemakaian

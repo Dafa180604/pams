@@ -93,7 +93,6 @@ class PemakaianController extends Controller
         ]);
     }
 
-    
     // Method untuk menyimpan data pemakaian
     public function store(Request $request)
     {
@@ -349,6 +348,10 @@ class PemakaianController extends Controller
                 'data' => [
                     'id_transaksi' => $transaksi->id_transaksi,
                     'nama_petugas' => Auth::user()->nama ?? 'Unknown',
+                    'nama_pelanggan' => $transaksi->pemakaian->users->nama ?? null,
+                    'alamat_pelanggan' => $transaksi->pemakaian && $transaksi->pemakaian->users
+                    ? trim("{$transaksi->pemakaian->users->alamat}, RT {$transaksi->pemakaian->users->rt} RW {$transaksi->pemakaian->users->rw}")
+                    : '-',
                     'tanggal_pencatatan' => $transaksi->pemakaian->waktu_catat ?? null,
                     'tanggal_pembayaran' => $transaksi->tgl_pembayaran ? $transaksi->tgl_pembayaran->format('Y-m-d H:i:s') : null,
             
@@ -372,8 +375,6 @@ class PemakaianController extends Controller
             ], 500);
         }
     }
-
-
     
     //Perhitungan
     private static function getBeban(): ?array
