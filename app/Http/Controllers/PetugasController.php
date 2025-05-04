@@ -12,7 +12,7 @@ class PetugasController extends Controller
 {
     public function index()
     {
-        $datapetugas = Users::where('role', 'admin')->get();
+        $datapetugas = Users::where('role', 'petugas')->get();
         return view('petugas.index', ['datapetugas' => $datapetugas]);
     }
 

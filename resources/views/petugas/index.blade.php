@@ -27,7 +27,7 @@
                                 class="border rounded-lg p-2 w-1/2 focus:border-gray-400 focus:ring-0 focus:outline-none" />
                         </div>
                         <div class="flex flex-wrap justify-center">
-                            @if($datapetugas->filter(fn($item) => $item->role === 'admin')->isEmpty())
+                            @if($datapetugas->filter(fn($item) => $item->role === 'petugas')->isEmpty())
                                 <div class="text-center w-full p-4">
                                     <p class="text-gray-500">Belum ada data petugas.</p>
                                 </div>

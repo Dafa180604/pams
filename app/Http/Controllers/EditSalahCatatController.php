@@ -17,28 +17,28 @@ class EditSalahCatatController extends Controller
      * Display the form for editing meter reading.
      */
     public function edit($id_transaksi)
-{
-    // Find the transaction record
-    $transaksi = Transaksi::findOrFail($id_transaksi);
+    {
+        // Find the transaction record
+        $transaksi = Transaksi::findOrFail($id_transaksi);
 
-    // Find the related pemakaian
-    $pemakaian = Pemakaian::findOrFail($transaksi->id_pemakaian);
+        // Find the related pemakaian
+        $pemakaian = Pemakaian::findOrFail($transaksi->id_pemakaian);
 
-    // Get user information
-    $user = Users::find($pemakaian->id_users);
+        // Get user information
+        $user = Users::find($pemakaian->id_users);
 
-    if (!$user) {
-        return redirect()->back()->with('error', 'Data pengguna tidak ditemukan.');
+        if (!$user) {
+            return redirect()->back()->with('error', 'Data pengguna tidak ditemukan.');
+        }
+
+        // Get petugas information (using id_users as the primary key)
+        $petugas = null;
+        if ($pemakaian->petugas) {
+            $petugas = Users::find($pemakaian->petugas);
+        }
+
+        return view('EditSalahCatat.edit', compact('pemakaian', 'transaksi', 'user', 'petugas'));
     }
-    
-    // Get petugas information (using id_users as the primary key)
-    $petugas = null;
-    if ($pemakaian->petugas) {
-        $petugas = Users::find($pemakaian->petugas);
-    }
-
-    return view('EditSalahCatat.edit', compact('pemakaian', 'transaksi', 'user', 'petugas'));
-}
 
     /**
      * Update the meter reading and recalculate all dependent data.
@@ -140,7 +140,6 @@ class EditSalahCatatController extends Controller
                     'November' => 'November',
                     'December' => 'Desember'
                 ];
-
                 // Ambil nilai petugas dari database
                 $petugasValue = $pemakaian->petugas;
 
@@ -191,13 +190,18 @@ class EditSalahCatatController extends Controller
             }
 
             // Commit transaction
+            // Commit transaction
             DB::commit();
 
-            $redirectRoute = $wasAlreadyPaid ? 'lunas.index' : 'pemakaian.index';
-            $message = 'Data pencatatan meter berhasil diperbarui' . ($wasAlreadyPaid ? ' beserta pembayarannya.' : '.');
-
-            return redirect()->route($redirectRoute)->with('success', $message);
-
+            if ($wasAlreadyPaid) {
+                // Redirect to lunas.show (detail) page with the correct parameter name 'luna'
+                return redirect()->route('lunas.show', ['luna' => $transaksi->id_transaksi])
+                    ->with('success', 'Data pencatatan meter berhasil diperbarui beserta pembayarannya.');
+            } else {
+                // Redirect to pemakaian index as before
+                return redirect()->route('belumlunas.index')
+                    ->with('success', 'Data pencatatan meter berhasil diperbarui.');
+            }
         } catch (\Exception $e) {
             // Roll back transaction on error
             DB::rollBack();

@@ -211,7 +211,7 @@ class BelumLunasController extends Controller
                 ];
 
                 // Get currently logged in user's name
-                $userName = auth()->user()->nama ?? 'Unknown';
+                $userName = auth()->user()->id_users ?? 'Unknown';
 
                 $bulanTeks = $bulanIndonesia[$bulan] ?? $bulan;
                 $keterangan = "Terima bayar {$bulanTeks} {$tahun} oleh admin {$userName}";
