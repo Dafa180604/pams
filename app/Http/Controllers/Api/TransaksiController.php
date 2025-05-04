@@ -47,7 +47,7 @@ class TransaksiController extends Controller
                 'jumlah_pemakaian'   => $item->pemakaian->jumlah_pemakaian ?? null,
                 'denda'              => $item->rp_denda,
                 'total_tagihan'      => $item->jumlah_rp,
-                'foto_meteran'      => $item->meteran->foto_meteran??null,  
+                'foto_meteran'      => $item->pemakaian->foto_meteran??null,  
             ];
         });
 

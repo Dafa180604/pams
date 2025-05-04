@@ -16,57 +16,6 @@ use App\Models\Laporan;
 
 class PemakaianController extends Controller
 {
-    // public function index(Request $request)
-    // {
-    //     $perPage = $request->get('per_page', 10); // default 10
-    //     $search = $request->get('search');
-    //     $userId = $request->get('id_users'); // tangkap id dari query jika ada
-
-    //     $query = Users::where('role', 'pelanggan');
-
-    //     // Jika ada pencarian berdasarkan nama/alamat/no_hp
-    //     if ($search) {
-    //         $query->where(function ($q) use ($search) {
-    //             $q->where('nama', 'like', "%{$search}%")
-    //             ->orWhere('alamat', 'like', "%{$search}%")
-    //             ->orWhere('no_hp', 'like', "%{$search}%");
-    //         });
-    //     }
-
-    //     // Jika ada pencarian berdasarkan id_users
-    //     if ($userId) {
-    //         $query->where('id_users', $userId);
-    //     }
-
-    //     $users = $query->paginate($perPage);
-
-    //     // Mapping data user
-    //     $mapped = $users->getCollection()->map(function ($user) {
-    //         $penggunaanTerakhir = Pemakaian::where('id_users', $user->id_users)->latest()->first();
-    //         $defaultValue = $user->jumlah_air ?? 0;
-
-    //         return [
-    //             'id_users' => $user->id_users,
-    //             'nama' => $user->nama,
-    //             'alamat' => $user->alamat,
-    //             'rw' => $user->rw,
-    //             'rt' => $user->rt,
-    //             'no_hp' => $user->no_hp,
-    //             'jumlah_air' => $defaultValue,
-    //             'meter_akhir' => $penggunaanTerakhir ? $penggunaanTerakhir->meter_akhir : $defaultValue,
-    //             'waktu_catat' => $penggunaanTerakhir ? $penggunaanTerakhir->waktu_catat : null,
-    //         ];
-    //     });
-
-    //     // Set kembali collection hasil map
-    //     $users->setCollection($mapped);
-
-    //     return response()->json([
-    //         'success' => true,
-    //         'message' => 'Data pemakaian berhasil diambil',
-    //         'data' => $users
-    //     ]);
-    // }
     public function index(Request $request)
     {
         $perPage = $request->get('per_page', 10); // default 10
@@ -153,6 +102,7 @@ class PemakaianController extends Controller
             'id_users' => 'required|exists:users,id_users', 
             'meter_awal' => 'required|numeric',
             'meter_akhir' => 'required|numeric|gte:meter_awal',
+            'foto_meteran' => 'nullable|image|mimes:jpg,jpeg,png|max:5048'
             // 'foto_meteran' => 'nullable|image', // Foto meteran opsional
         ], [
             'meter_awal.required' => 'Meter Awal Wajib Diisi!',
@@ -189,12 +139,19 @@ class PemakaianController extends Controller
             $bucket = $storage->bucket($bucketName);
 
             // Upload file ke Firebase Storage
-            $bucket->upload(
-                fopen($file->getRealPath(), 'r'),
-                [
-                    'name' => $fileName,
-                ]
-            );
+            try {
+                $bucket->upload(
+                    fopen($file->getRealPath(), 'r'),
+                    [
+                        'name' => $fileName,
+                    ]
+                );
+                \Log::info('Firebase Upload Success');
+            } catch (\Exception $e) {
+                \Log::error('Firebase Upload Failed: ' . $e->getMessage());
+                throw $e;  // optionally throw lagi biar tetap error
+            }
+
 
             // Buat file publik
             $object = $bucket->object($fileName);
@@ -234,6 +191,7 @@ class PemakaianController extends Controller
             'id_users' => 'required|exists:users,id_users',
             'meter_awal' => 'required|numeric',
             'meter_akhir' => 'required|numeric|gte:meter_awal',
+            'foto_meteran' => 'nullable|image|mimes:jpg,jpeg,png|max:5048'
             // 'foto_meteran' => 'nullable|image', // Foto meteran opsional
         ], [
             'meter_awal.required' => 'Meter Awal Wajib Diisi!',
@@ -269,12 +227,19 @@ class PemakaianController extends Controller
             $bucket = $storage->bucket($bucketName);
 
             // Upload file ke Firebase Storage
-            $bucket->upload(
-                fopen($file->getRealPath(), 'r'),
-                [
-                    'name' => $fileName,
-                ]
-            );
+            try {
+                $bucket->upload(
+                    fopen($file->getRealPath(), 'r'),
+                    [
+                        'name' => $fileName,
+                    ]
+                );
+                \Log::info('Firebase Upload Success');
+            } catch (\Exception $e) {
+                \Log::error('Firebase Upload Failed: ' . $e->getMessage());
+                throw $e;  // optionally throw lagi biar tetap error
+            }
+
 
             // Buat file publik
             $object = $bucket->object($fileName);
