@@ -35,8 +35,19 @@
                                         </div>
                                         <div class="mb-2 flex">
                                             <span class="text-muted w-32">Petugas:</span>
-                                            <span
-                                                class="fw-bold">{{ $petugasUser ? $petugasUser->nama : $data->pemakaian->petugas }}</span>
+                                            <span class="fw-bold">
+                                                @if($petugasUser)
+                                                    {{ $petugasUser->nama }}
+                                                @else
+                                                    @php
+                                                        $petugasId = $data->pemakaian->petugas;
+                                                        $user = DB::table('users')->where('id_users', $petugasId)
+                                                            ->orWhere('id_users', $petugasId)
+                                                            ->first();
+                                                        echo $user ? $user->nama : $petugasId;
+                                                    @endphp
+                                                @endif
+                                            </span>
                                         </div>
                                     </div>
                                     <div class="col-md-6">

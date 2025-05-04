@@ -12,7 +12,8 @@ class PengeluaranController extends Controller
      */
     public function index()
     {
-        $datapengeluaran = Laporan::whereNotNull('uang_keluar')->get();
+        $datapengeluaran = Laporan::whereNotNull('uang_keluar')->orderBy('created_at', 'desc')
+        ->get();
         return view('pengeluaran.index', ['datapengeluaran' => $datapengeluaran]);
     }
 

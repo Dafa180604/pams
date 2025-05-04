@@ -46,7 +46,11 @@
                                     @foreach($dataKeluhan as $data)
                                         <tr>
                                             <td>{{ $loop->iteration }}</td>
-                                            <td>{{ $data->users->nama }}</td>
+                                            @php
+                                                $user = $data->users ?? \App\Models\Users::withTrashed()->find($data->id_users ?? $data->id_users);
+                                            @endphp
+                                            <td>{{ $user->nama ?? '-' }}</td>
+
                                             <!-- <td>{{ $data->keterangan }}</td> -->
                                             <td style="color: 
                                                 {{ $data->status === 'Terkirim' ? '#FF3366' : 

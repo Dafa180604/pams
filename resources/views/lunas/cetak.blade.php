@@ -231,24 +231,33 @@
             <tr>
     <th>Petugas</th>
     <td>
-        @if($dataTransaksi->pemakaian->petugas)
-            @php
-                $petugasIdArray = explode(',', $dataTransaksi->pemakaian->petugas);
-                $petugasNames = [];
-                foreach($petugasIdArray as $petugasId) {
-                    $petugasId = trim($petugasId);
-                    if(isset($petugasUsers[$petugasId])) {
-                        $petugasNames[] = $petugasUsers[$petugasId]->nama;
+    @if($dataTransaksi->pemakaian->petugas)
+        @php
+            $petugasIdArray = explode(',', $dataTransaksi->pemakaian->petugas);
+            $petugasNames = [];
+            foreach($petugasIdArray as $petugasId) {
+                $petugasId = trim($petugasId);
+                if(isset($petugasUsers[$petugasId])) {
+                    $petugasNames[] = $petugasUsers[$petugasId]->nama;
+                } else {
+                    // Try to find the user directly from database
+                    // Mencoba berbagai kemungkinan nama kolom primary key
+                    $user = DB::table('users')->where('id_users', $petugasId)
+                                           ->orWhere('id_users', $petugasId)
+                                           ->first();
+                    if($user) {
+                        $petugasNames[] = $user->nama;
                     } else {
                         $petugasNames[] = $petugasId;
                     }
                 }
-                echo implode(', ', $petugasNames);
-            @endphp
-        @else
-            -
-        @endif
-    </td>
+            }
+            echo implode(', ', $petugasNames);
+        @endphp
+    @else
+        -
+    @endif
+</td>
 </tr>
         </table>
     </div>

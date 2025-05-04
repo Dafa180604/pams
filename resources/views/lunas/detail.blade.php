@@ -42,24 +42,31 @@
         <h4 class="font-bold uppercase mt-4 mb-2">{{ $dataTransaksi->status_pembayaran }}</h4>
         <p class="mb-1">ID pemakaian : {{ $dataTransaksi->pemakaian->id_pemakaian }}</p>
         <h4 class="font-normal">Nama Petugas/Pencatat :
-          @if($dataTransaksi->pemakaian->petugas)
-          @php
-        $petugasIdArray = explode(',', $dataTransaksi->pemakaian->petugas);
-        $petugasNames = [];
-        foreach ($petugasIdArray as $petugasId) {
-        $petugasId = trim($petugasId);
-        if (isset($petugasUsers[$petugasId])) {
-        $petugasNames[] = $petugasUsers[$petugasId]->nama;
-        } else {
-        $petugasNames[] = $petugasId;
-        }
-        }
-        echo implode(', ', $petugasNames);
+    @if($dataTransaksi->pemakaian->petugas)
+        @php
+            $petugasIdArray = explode(',', $dataTransaksi->pemakaian->petugas);
+            $petugasNames = [];
+            foreach ($petugasIdArray as $petugasId) {
+                $petugasId = trim($petugasId);
+                if (isset($petugasUsers[$petugasId])) {
+                    $petugasNames[] = $petugasUsers[$petugasId]->nama;
+                } else {
+                    // Try to find the user directly from database
+                    // Adjust the column name based on your actual database schema
+                    $user = DB::table('users')->where('id_users', $petugasId)->orWhere('id_users', $petugasId)->first();
+                    if ($user) {
+                        $petugasNames[] = $user->nama;
+                    } else {
+                        $petugasNames[] = $petugasId;
+                    }
+                }
+            }
+            echo implode(', ', $petugasNames);
         @endphp
-      @else
+    @else
         -
-      @endif
-        </h4>
+    @endif
+</h4>
         <h6 class="mb-0 mt-3 font-normal"><span class="text-gray-600">Tanggal Mencatat :</span>
           {{ $dataTransaksi->pemakaian->waktu_catat }}</h6>
         <h6 class="font-normal"><span class="text-gray-600">Tanggal Pembayaran :</span>

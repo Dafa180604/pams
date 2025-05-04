@@ -76,7 +76,14 @@
                 if(isset($petugasUsers[$petugasId])) {
                     $petugasNames[] = $petugasUsers[$petugasId]->nama;
                 } else {
-                    $petugasNames[] = $petugasId;
+                    // Try to find the user directly from database
+                    // Using 'user_id' instead of 'id' as the primary key column
+                    $user = DB::table('users')->where('id_users', $petugasId)->first();
+                    if($user) {
+                        $petugasNames[] = $user->nama;
+                    } else {
+                        $petugasNames[] = $petugasId;
+                    }
                 }
             }
             echo implode(', ', $petugasNames);

@@ -53,16 +53,16 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <!-- Display previous saldo if any -->
-                                    @if($previousSaldo > 0)
-                                        <tr class="table-secondary">
-                                            <td>-</td>
-                                            <td><strong>Saldo Awal</strong></td>
-                                            <td>{{ $startDate }}</td>
-                                            <td>-</td>
-                                            <td>-</td>
-                                            <td><strong>Rp {{ number_format($previousSaldo, 0, ',', '.') }}</strong></td>
-                                        </tr>
+                                    <!-- Display saldo awal only if it's not zero -->
+                                    @if($previousSaldo != 0)
+                                    <tr class="table-secondary">
+                                        <td>-</td>
+                                        <td><strong>Saldo Awal</strong></td>
+                                        <td>{{ $startDate }}</td>
+                                        <td>-</td>
+                                        <td>-</td>
+                                        <td><strong>Rp {{ number_format($previousSaldo, 0, ',', '.') }}</strong></td>
+                                    </tr>
                                     @endif
 
                                     @php
@@ -70,18 +70,18 @@
                                         $counter = 1;
                                     @endphp
                                     @foreach($dataLaporan as $data)
-                                                                    @php
-                                                                        $runningSaldo += $data->uang_masuk;
-                                                                        $runningSaldo -= $data->uang_keluar;
-                                                                    @endphp
-                                                                    <tr>
-                                                                        <td>{{ $counter++ }}</td>
-                                                                        <td>{{ $data->keterangan }}</td>
-                                                                        <td>{{ $data->tanggal }}</td>
-                                                                        <td>Rp {{ number_format($data->uang_masuk, 0, ',', '.') }}</td>
-                                                                        <td>Rp {{ number_format($data->uang_keluar, 0, ',', '.') }}</td>
-                                                                        <td>Rp {{ number_format($runningSaldo, 0, ',', '.') }}</td>
-                                                                    </tr>
+                                        @php
+                                            $runningSaldo += $data->uang_masuk;
+                                            $runningSaldo -= $data->uang_keluar;
+                                        @endphp
+                                        <tr>
+                                            <td>{{ $counter++ }}</td>
+                                            <td>{{ $data->keterangan }}</td>
+                                            <td>{{ $data->tanggal }}</td>
+                                            <td>Rp {{ number_format($data->uang_masuk, 0, ',', '.') }}</td>
+                                            <td>Rp {{ number_format($data->uang_keluar, 0, ',', '.') }}</td>
+                                            <td>Rp {{ number_format($runningSaldo, 0, ',', '.') }}</td>
+                                        </tr>
                                     @endforeach
                                 </tbody>
                             </table>

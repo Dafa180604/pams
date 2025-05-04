@@ -50,7 +50,13 @@
                                                 @if(isset($petugasUsers[$data->pemakaian->petugas]))
                                                     {{ $petugasUsers[$data->pemakaian->petugas]->nama }}
                                                 @else
-                                                    {{ $data->pemakaian->petugas }}
+                                                    @php
+                                                        $petugasId = $data->pemakaian->petugas;
+                                                        $user = DB::table('users')->where('id_users', $petugasId)
+                                                            ->orWhere('id_users', $petugasId)
+                                                            ->first();
+                                                        echo $user ? $user->nama : $petugasId;
+                                                    @endphp
                                                 @endif
                                             </td>
                                             <td>

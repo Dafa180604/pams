@@ -117,17 +117,17 @@ class KeluhanController extends Controller
      * Show the form for editing the specified resource.
      */
     public function edit(string $id_keluhan)
-    {
-        $keluhan = Keluhan::findOrFail($id_keluhan);
+{
+    $keluhan = Keluhan::findOrFail($id_keluhan);
 
-        if ($keluhan->status !== 'Dibaca') {
-            $keluhan->status = 'Dibaca';
-            $keluhan->save();
-        }
-
-        return view('keluhan.edit', ['data' => $keluhan]);
+    // Hanya ubah status jika awalnya 'Terkirim'
+    if ($keluhan->status === 'Terkirim') {
+        $keluhan->status = 'Dibaca';
+        $keluhan->save();
     }
 
+    return view('keluhan.edit', ['data' => $keluhan]);
+}
 
     /**
      * Update the specified resource in storage.

@@ -12,41 +12,40 @@ class PetugasController extends Controller
 {
     public function index()
     {
-        $datapetugas = Users::where('role', 'petugas')->get();
+        $datapetugas = Users::where('role', 'admin')->get();
         return view('petugas.index', ['datapetugas' => $datapetugas]);
     }
 
     public function show($id, Request $request)
-    {
-        // Find the officer by ID
-        $data = Users::findOrFail($id);
+{
+    // Cari data petugas termasuk yang sudah soft delete
+    $data = Users::withTrashed()->findOrFail($id);
 
-        // Initialize query for pemakaian records using the officer's name
-        $pemakaianQuery = Pemakaian::where('petugas', $data->id_users);
+    // Query pemakaian berdasarkan ID petugas
+    $pemakaianQuery = Pemakaian::where('petugas', $data->id_users);
 
-        // Filter by month if provided
-        if ($request->has('end_date')) {
-            $selectedMonth = $request->input('end_date');
+    // Filter berdasarkan bulan jika ada
+    if ($request->has('end_date')) {
+        $selectedMonth = $request->input('end_date');
+        $startDate = Carbon::createFromFormat('Y-m', $selectedMonth)->startOfMonth();
+        $endDate = Carbon::createFromFormat('Y-m', $selectedMonth)->endOfMonth();
 
-            // Parse the month input (YYYY-MM format)
-            $startDate = Carbon::createFromFormat('Y-m', $selectedMonth)->startOfMonth();
-            $endDate = Carbon::createFromFormat('Y-m', $selectedMonth)->endOfMonth();
-
-            // Filter records between the start and end of the selected month
-            $pemakaianQuery->whereBetween('waktu_catat', [$startDate, $endDate]);
-        }
-
-        // Paginate the pemakaian records
-        $pencatatan = $pemakaianQuery->with(['users'])
-            ->orderBy('waktu_catat', 'desc')
-            ->paginate(10);
-
-        // Return the view with data
-        return view('petugas.detail', [
-            'data' => $data,
-            'pencatatan' => $pencatatan
-        ]);
+        $pemakaianQuery->whereBetween('waktu_catat', [$startDate, $endDate]);
     }
+
+    // Ambil data pemakaian dan user (termasuk soft deleted)
+    $pencatatan = $pemakaianQuery->with(['users' => function ($query) {
+        $query->withTrashed();
+    }])
+    ->orderBy('waktu_catat', 'desc')
+    ->paginate(10);
+
+    return view('petugas.detail', [
+        'data' => $data,
+        'pencatatan' => $pencatatan
+    ]);
+}
+
 
 
 

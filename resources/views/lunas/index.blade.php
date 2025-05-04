@@ -53,7 +53,15 @@
                 if(isset($petugasUsers[$petugasId])) {
                     $petugasNames[] = $petugasUsers[$petugasId]->nama;
                 } else {
-                    $petugasNames[] = $petugasId;
+                    // Mencari user di database meskipun sudah di-soft delete
+                    $user = DB::table('users')->where('id_users', $petugasId)
+                                           ->orWhere('id_users', $petugasId)
+                                           ->first();
+                    if($user) {
+                        $petugasNames[] = $user->nama;
+                    } else {
+                        $petugasNames[] = $petugasId;
+                    }
                 }
             }
             echo implode(', ', $petugasNames);
