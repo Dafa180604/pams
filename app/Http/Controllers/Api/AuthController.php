@@ -25,7 +25,7 @@ class AuthController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Username tidak terdaftar!',
-            ], 404);
+            ], 401);
         }
     
         // Coba login
@@ -45,6 +45,7 @@ class AuthController extends Controller
                     'no_hp' => $user->no_hp,
                     'username' => $user->username,
                     'role' => $user->role,
+                    'foto_profile' => $user->foto_profile,
                 ],
                 'token' => $token // Menambahkan token ke respons
             ]);

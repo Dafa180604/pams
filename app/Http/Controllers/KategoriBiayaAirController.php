@@ -19,7 +19,7 @@ class KategoriBiayaAirController extends Controller
         $last_reading = KategoriBiayaAir::latest()->first();
         $last_meter_akhir = $last_reading ? $last_reading->batas_atas + 1 : 0;
 
-        return view('kategoribiayaair.create', compact('last_meter_akhir'));
+        return view('KategoriBiayaAir.create', compact('last_meter_akhir'));
     }
 
     public function store(Request $request)
