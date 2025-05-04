@@ -83,7 +83,7 @@
       <li class="nav-item nav-category">Aktivitas</li>
       <li class="nav-item">
         <a href="{{route('keluhan.index')}}" class="nav-link">
-          <i class="link-icon" data-feather="book"></i>
+          <i class="link-icon" data-feather="alert-triangle"></i>
           <span class="link-title">Keluhan</span>
         </a>
         <a href="{{route('pengeluaran.index')}}" class="nav-link">

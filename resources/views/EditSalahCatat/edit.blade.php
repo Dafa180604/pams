@@ -54,7 +54,7 @@
                                             </tr>
                                             <tr>
                                                 <td>Petugas</td>
-                                                <td>: {{ $pemakaian->petugas }}</td>
+                                                <td>: {{ $petugas ? $petugas->nama : $pemakaian->petugas }}</td>
                                             </tr>
                                         </table>
                                     </div>
@@ -238,8 +238,8 @@
         }
 
         // Close popup when clicking outside the image
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('imagePopup').addEventListener('click', function(event) {
+        document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById('imagePopup').addEventListener('click', function (event) {
                 if (event.target === this) {
                     closeImage();
                 }

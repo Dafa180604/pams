@@ -39,13 +39,20 @@
                                         <tr>
                                             <td>{{$loop->iteration}}</td>
                                             <td>{{ $data->id_pemakaian}}</td>
-                                            <td>{{ optional($data->pemakaian->users()->withTrashed()->first())->nama ?? 'Pengguna dihapus' }}</td>
+                                            <td>{{ optional($data->pemakaian->users()->withTrashed()->first())->nama ?? 'Pengguna dihapus' }}
+                                            </td>
                                             <td>{{ $data->pemakaian->meter_awal}}</td>
                                             <td>{{ $data->pemakaian->meter_akhir}}</td>
                                             <td>{{ $data->pemakaian->jumlah_pemakaian}}</td>
                                             <td>{{ $data->jumlah_rp}}</td>
                                             <td>{{ $data->pemakaian->waktu_catat}}</td>
-                                            <td>{{ $data->pemakaian->petugas}}</td>
+                                            <td>
+                                                @if(isset($petugasUsers[$data->pemakaian->petugas]))
+                                                    {{ $petugasUsers[$data->pemakaian->petugas]->nama }}
+                                                @else
+                                                    {{ $data->pemakaian->petugas }}
+                                                @endif
+                                            </td>
                                             <td>
                                                 <a href="{{ route('belumlunas.edit', $data->id_transaksi) }}"
                                                     class="btn btn-success">Bayar</a>

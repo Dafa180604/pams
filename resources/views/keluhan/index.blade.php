@@ -36,6 +36,7 @@
                                         <th>No.</th>
                                         <th>Nama Pelapor</th>
                                         <!-- <th>Keterangan</th> -->
+                                        <th>Status</th>
                                         <th>Tanggal</th>
                                         <th>Foto Keluhan</th>
                                         <th>Aksi</th>
@@ -47,6 +48,13 @@
                                             <td>{{ $loop->iteration }}</td>
                                             <td>{{ $data->users->nama }}</td>
                                             <!-- <td>{{ $data->keterangan }}</td> -->
+                                            <td style="color: 
+                                                {{ $data->status === 'Terkirim' ? '#FF3366' : 
+                                                ($data->status === 'Dibaca' ? '#FFC107' : 
+                                                ($data->status === 'Diproses' ? '#28a745' : '#6c757d')) }};">
+                                                {{ $data->status }}
+                                            </td>
+
                                             <td>{{ $data->tanggal }}</td>
                                             <td>
                                                 <img id="foto_keluhan" class="w-32 h-32 rounded-full border-2 border-gray-300"

@@ -22,7 +22,7 @@ class PemakaianController extends Controller
         $petugas = auth()->user();
 
         // Pastikan user yang login adalah petugas
-        if ($petugas->role != 'petugas') {
+        if ($petugas->role != 'admin') {
             // Redirect atau tampilkan error jika bukan petugas
             return redirect()->back()->with('error', 'Anda tidak memiliki akses ke halaman ini');
         }

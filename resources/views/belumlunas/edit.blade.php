@@ -35,7 +35,8 @@
                                         </div>
                                         <div class="mb-2 flex">
                                             <span class="text-muted w-32">Petugas:</span>
-                                            <span class="fw-bold">{{ Auth::user()->nama ?? 'Admin' }}</span>
+                                            <span
+                                                class="fw-bold">{{ $petugasUser ? $petugasUser->nama : $data->pemakaian->petugas }}</span>
                                         </div>
                                     </div>
                                     <div class="col-md-6">

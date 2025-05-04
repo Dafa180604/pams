@@ -42,6 +42,10 @@
                                                 <td class="fw-bold">No. Telepon</td>
                                                 <td>: {{ $data->users->no_hp }}</td>
                                             </tr>
+                                            <tr>
+                                                <td class="fw-bold">Status</td>
+                                                <td>: {{ $data->status }}</td>
+                                            </tr>
                                         </table>
                                     </div>
                                 </div>

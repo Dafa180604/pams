@@ -14,6 +14,7 @@ return new class extends Migration {
             $table->id('id_keluhan');
             $table->unsignedBigInteger('id_users')->nullable();
             $table->string('keterangan');
+            $table->string('status');
             $table->string('foto_keluhan')->nullable();
             $table->dateTime('tanggal');
             $table->string('tanggapan')->nullable();

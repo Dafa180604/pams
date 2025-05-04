@@ -66,19 +66,44 @@
                                                 </span>
                                             </td>
                                             <td>{{ $data->tgl_pembayaran }}</td>
-                                            <td>{{ $data->pemakaian->petugas }}</td>
+                                            <td>
+    @if($data->pemakaian->petugas)
+        @php
+            $petugasIdArray = explode(',', $data->pemakaian->petugas);
+            $petugasNames = [];
+            foreach($petugasIdArray as $petugasId) {
+                $petugasId = trim($petugasId);
+                if(isset($petugasUsers[$petugasId])) {
+                    $petugasNames[] = $petugasUsers[$petugasId]->nama;
+                } else {
+                    $petugasNames[] = $petugasId;
+                }
+            }
+            echo implode(', ', $petugasNames);
+        @endphp
+    @else
+        -
+    @endif
+</td>
                                             <td>
                                                 <a href="{{ route('lunas.show', $data->id_transaksi) }}"
                                                     class="btn btn-info">Detail</a>
-                                                <a href="{{ route('EditSalahCatat.edit', $data->id_transaksi) }}"
-                                                    class="btn btn-warning">Edit</a>
+                                                @php
+                                                    $idTerakhir = $dataTransaksi->max('id_transaksi');
+                                                @endphp
+
+                                                @if ($data->id_transaksi == $idTerakhir)
+                                                    <a href="{{ route('EditSalahCatat.edit', $data->id_transaksi) }}"
+                                                        class="btn btn-warning">Edit</a>
+                                                @endif
+
                                                 <!-- @if($data->status_pembayaran == 'Lunas')
-                                                                                        <a href="{{ route('lunas.cetak', $data->id_transaksi) }}"
-                                                                                            class="btn btn-success" target="_blank">Cetak</a>
-                                                                                    @else
-                                                                                        <a href="{{ route('lunas.edit', $data->id_transaksi) }}"
-                                                                                            class="btn btn-warning">Bayar</a>
-                                                                                    @endif -->
+                                                                                                <a href="{{ route('lunas.cetak', $data->id_transaksi) }}"
+                                                                                                    class="btn btn-success" target="_blank">Cetak</a>
+                                                                                            @else
+                                                                                                <a href="{{ route('lunas.edit', $data->id_transaksi) }}"
+                                                                                                    class="btn btn-warning">Bayar</a>
+                                                                                            @endif -->
                                             </td>
                                         </tr>
                                     @endforeach

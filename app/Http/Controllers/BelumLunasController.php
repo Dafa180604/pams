@@ -17,9 +17,28 @@ class BelumLunasController extends Controller
     public function index()
     {
         $dataPemakaian = Pemakaian::all();
-        $dataTransaksi = Transaksi::where('status_pembayaran', '!=', 'lunas')->get();
-        return view('belumlunas.index', ['dataTransaksi' => $dataTransaksi, 'dataPencatatan' => $dataPemakaian]);
+        $dataTransaksi = Transaksi::with('pemakaian')->where('status_pembayaran', '!=', 'lunas')->get();
 
+        // Collect all petugas IDs
+        $petugasIds = collect();
+        foreach ($dataTransaksi as $transaksi) {
+            if ($transaksi->pemakaian && $transaksi->pemakaian->petugas) {
+                $petugasIds->push($transaksi->pemakaian->petugas);
+            }
+        }
+        $petugasIds = $petugasIds->unique()->filter();
+
+        // Get all petugas users in one query
+        $petugasUsers = [];
+        if ($petugasIds->isNotEmpty()) {
+            $petugasUsers = Users::whereIn('id_users', $petugasIds)->get()->keyBy('id_users');
+        }
+
+        return view('belumlunas.index', [
+            'dataTransaksi' => $dataTransaksi,
+            'dataPencatatan' => $dataPemakaian,
+            'petugasUsers' => $petugasUsers
+        ]);
     }
 
     /**
@@ -50,75 +69,70 @@ class BelumLunasController extends Controller
      * Show the form for editing the specified resource.
      */
     public function edit(string $id_transaksi)
-    {
-        // Find the transaction with related data
-        $data = Transaksi::with(['pemakaian'])->find($id_transaksi);
-
-        if ($data) {
-            // Calculate days since the recording date
-            $waktuCatat = new DateTime($data->pemakaian->waktu_catat);
-            $today = new DateTime();
-            $interval = $waktuCatat->diff($today);
-            $daysDifference = $interval->days;
-
-            // Only apply late fee if at least 2 days late (according to your image)
-            if ($daysDifference >= 2 && !$data->id_biaya_denda) {
-                // Get all late fee categories
-                $allDendaCategories = BiayaDenda::orderBy('jumlah_telat', 'asc')->get();
-                $biayaDenda = null;
-
-                // Find the appropriate category based on days difference
-                foreach ($allDendaCategories as $index => $category) {
-                    $currentThreshold = $category->jumlah_telat;
-
-                    // Find the next threshold if available
-                    $nextThreshold = PHP_INT_MAX; // Default to maximum value
-                    if (isset($allDendaCategories[$index + 1])) {
-                        $nextThreshold = $allDendaCategories[$index + 1]->jumlah_telat;
-                    }
-
-                    // Check if days difference falls in this range
-                    if ($daysDifference >= $currentThreshold && $daysDifference < $nextThreshold) {
-                        $biayaDenda = $category;
-                        break;
-                    }
+{
+    // Find the transaction with related data
+    $data = Transaksi::with(['pemakaian'])->find($id_transaksi);
+    if ($data) {
+        // Calculate days since the recording date
+        $waktuCatat = new DateTime($data->pemakaian->waktu_catat);
+        $today = new DateTime();
+        $interval = $waktuCatat->diff($today);
+        $daysDifference = $interval->days;
+        // Only apply late fee if at least 2 days late (according to your image)
+        if ($daysDifference >= 2 && !$data->id_biaya_denda) {
+            // Get all late fee categories
+            $allDendaCategories = BiayaDenda::orderBy('jumlah_telat', 'asc')->get();
+            $biayaDenda = null;
+            // Find the appropriate category based on days difference
+            foreach ($allDendaCategories as $index => $category) {
+                $currentThreshold = $category->jumlah_telat;
+                // Find the next threshold if available
+                $nextThreshold = PHP_INT_MAX; // Default to maximum value
+                if (isset($allDendaCategories[$index + 1])) {
+                    $nextThreshold = $allDendaCategories[$index + 1]->jumlah_telat;
                 }
-
-                // If a matching late fee category is found
-                if ($biayaDenda) {
-                    // Calculate the late fee (percentage)
-                    $percentageFee = $biayaDenda->biaya_telat;
-                    $rpDenda = $data->jumlah_rp * ($percentageFee / 100);
-
-                    // Update the transaction data with late fee information
-                    $data->id_biaya_denda = $biayaDenda->id_biaya_denda;
-                    $data->rp_denda = $rpDenda;
-
-                    // Update the total amount to include the late fee
-                    $originalTotal = $data->jumlah_rp;
-                    $data->jumlah_rp = $originalTotal + $rpDenda;
-
-                    // Update the detail_biaya JSON to include late fee
-                    $detailBiaya = json_decode($data->detail_biaya, true);
-                    $detailBiaya['denda'] = [
-                        'id' => $biayaDenda->id_biaya_denda,
-                        'jumlah_telat' => $daysDifference, // Actual days late
-                        'biaya_telat' => $biayaDenda->biaya_telat, // Percentage value
-                        'rp_denda' => $rpDenda  // Calculated amount
-                    ];
-                    $data->detail_biaya = json_encode($detailBiaya);
-
-                    // Save the updated transaction
-                    $data->save();
-
-                    // Refresh the data after updates
-                    $data = Transaksi::with(['pemakaian'])->find($id_transaksi);
+                // Check if days difference falls in this range
+                if ($daysDifference >= $currentThreshold && $daysDifference < $nextThreshold) {
+                    $biayaDenda = $category;
+                    break;
                 }
             }
+            // If a matching late fee category is found
+            if ($biayaDenda) {
+                // Calculate the late fee (percentage)
+                $percentageFee = $biayaDenda->biaya_telat;
+                $rpDenda = $data->jumlah_rp * ($percentageFee / 100);
+                // Update the transaction data with late fee information
+                $data->id_biaya_denda = $biayaDenda->id_biaya_denda;
+                $data->rp_denda = $rpDenda;
+                // Update the total amount to include the late fee
+                $originalTotal = $data->jumlah_rp;
+                $data->jumlah_rp = $originalTotal + $rpDenda;
+                // Update the detail_biaya JSON to include late fee
+                $detailBiaya = json_decode($data->detail_biaya, true);
+                $detailBiaya['denda'] = [
+                    'id' => $biayaDenda->id_biaya_denda,
+                    'jumlah_telat' => $daysDifference, // Actual days late
+                    'biaya_telat' => $biayaDenda->biaya_telat, // Percentage value
+                    'rp_denda' => $rpDenda  // Calculated amount
+                ];
+                $data->detail_biaya = json_encode($detailBiaya);
+                // Save the updated transaction
+                $data->save();
+                // Refresh the data after updates
+                $data = Transaksi::with(['pemakaian'])->find($id_transaksi);
+            }
         }
-
-        return view('belumlunas.edit', compact('data'));
     }
+    
+    // Get petugas user data
+    $petugasUser = null;
+    if ($data && $data->pemakaian && $data->pemakaian->petugas) {
+        $petugasUser = Users::find($data->pemakaian->petugas);
+    }
+    
+    return view('belumlunas.edit', compact('data', 'petugasUser'));
+}
 
     /**
      * Update the specified resource in storage.
@@ -155,7 +169,7 @@ class BelumLunasController extends Controller
             $existingPetugas = $pemakaian->petugas ?? '';
 
             // Ambil nama user yang sedang login
-            $namaUser = auth()->user()->nama;
+            $namaUser = auth()->user()->id_users;
 
             // Gabungkan nama jika belum ada dalam daftar (hindari duplikasi)
             $daftarPetugas = collect(explode(',', $existingPetugas))

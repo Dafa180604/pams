@@ -43,8 +43,25 @@
                                             <td>{{ $data->pemakaian->meter_akhir }}</td>
                                             <td>{{ $data->pemakaian->jumlah_pemakaian }}</td>
                                             <td>{{ $data->jumlah_rp }}</td>
-                                            <td>{{ $data->tgl_pembayaran }}</td>
-                                            <td>{{ $data->pemakaian->petugas }}</td>
+                                            <td>{{ $data->tgl_pembayaran }}</td><td>
+    @if($data->pemakaian->petugas)
+        @php
+            $petugasIdArray = explode(',', $data->pemakaian->petugas);
+            $petugasNames = [];
+            foreach($petugasIdArray as $petugasId) {
+                $petugasId = trim($petugasId);
+                if(isset($petugasUsers[$petugasId])) {
+                    $petugasNames[] = $petugasUsers[$petugasId]->nama;
+                } else {
+                    $petugasNames[] = $petugasId;
+                }
+            }
+            echo implode(', ', $petugasNames);
+        @endphp
+    @else
+        -
+    @endif
+</td>
                                             <td><a href="{{ route('lunas.show', $data->id_transaksi) }}"
                                                 class="btn btn-info btn-sm me-2">Detail</a></td>
                                         </tr>

@@ -9,7 +9,7 @@ class Laporan extends Model
     use HasFactory;
     protected $table = 'laporan';
     protected $primaryKey = 'id_laporan';
-    protected $fillable = ['id_laporan', 'keterangan', 'uang_masuk', 'uang_keluar', 'sisa_saldo'];
+    protected $fillable = ['id_laporan', 'keterangan','status', 'uang_masuk', 'uang_keluar', 'sisa_saldo'];
 
     public function Transaksi()
     {
