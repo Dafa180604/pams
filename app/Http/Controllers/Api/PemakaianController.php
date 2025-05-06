@@ -70,6 +70,13 @@ class PemakaianController extends Controller
             $penggunaanTerakhir = Pemakaian::where('id_users', $user->id_users)->latest()->first();
             $defaultValue = $user->jumlah_air ?? 0;
 
+            // Cek apakah sudah dicatat di bulan ini
+            $sudahDicatatBulanIni = false;
+            if ($penggunaanTerakhir && $penggunaanTerakhir->waktu_catat) {
+                $catatDate = \Carbon\Carbon::parse($penggunaanTerakhir->waktu_catat);
+                $sudahDicatatBulanIni = $catatDate->isSameMonth(now());
+            }
+
             return [
                 'id_users' => $user->id_users,
                 'nama' => $user->nama,
@@ -80,6 +87,7 @@ class PemakaianController extends Controller
                 'jumlah_air' => $defaultValue,
                 'meter_akhir' => $penggunaanTerakhir ? $penggunaanTerakhir->meter_akhir : $defaultValue,
                 'waktu_catat' => $penggunaanTerakhir ? $penggunaanTerakhir->waktu_catat : null,
+                'sudah_dicatat_bulan_ini' => $sudahDicatatBulanIni,
             ];
         });
 

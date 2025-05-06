@@ -9,25 +9,24 @@ use App\Http\Controllers\Api\KeluhanController;
 use App\Http\Controllers\Api\TransaksiController;  
 
 
-//Route Api Keluahan 
-Route::get('/keluhan', [KeluhanController::class, 'index']);
+Route::middleware('auth:sanctum')->group(function () {  
 
-//Route Api Transaksi
-Route::middleware('auth:sanctum')->group(function () {
+    //Route Api Keluahan 
+    Route::get('/keluhan', [KeluhanController::class, 'index']);
+    //Route Api Transaksi 
+    Route::get('/transaksi/{id}', [TransaksiController::class, 'show']);  
     Route::get('/transaksi', [TransaksiController::class, 'index']); 
-    Route::get('/transaksi/{id}', [TransaksiController::class, 'show']); 
-});
-
-//Route Api Pemakaian
-Route::middleware('auth:sanctum')->group(function () { 
+    //Route Api Pemakaian
     Route::get('/pemakaian', [PemakaianController::class, 'index']);
     Route::post('/pemakaian/store', [PemakaianController::class, 'store']);  
     Route::post('/pemakaian/bayar/langsung', [PemakaianController::class, 'bayar']); 
     Route::put('/pemakaian/bayar/lunas', [PemakaianController::class, 'update']);
-});
+    //Route Api Data Dashboard
+    Route::get('/dashboard/petugas', [DashboardController::class, 'dataDashboardPetugas']);
+    //Route Api ubah password
+    Route::post('/ubah-password', [AuthController::class, 'ubahPassword']);
 
-//Route Api Data Dashboard
-Route::middleware(['auth:sanctum'])->get('/dashboard/petugas', [DashboardController::class, 'dataDashboardPetugas']);
+}); 
 
 //Route Api Auth
 Route::prefix('auth')->group(function () {

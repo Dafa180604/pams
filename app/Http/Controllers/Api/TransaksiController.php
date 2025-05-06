@@ -16,34 +16,31 @@ class TransaksiController extends Controller
     public function index(Request $request)
     { 
         $petugasId = Auth::user()->id_users;
-    $search = $request->input('search');  // Ambil input search secara umum
-    $currentMonth = now()->month;
-    $currentYear = now()->year;
+        $search = $request->input('search');  // Ambil input search secara umum
+        $currentMonth = now()->month;
+        $currentYear = now()->year;
 
-    $transaksi = Transaksi::with(['pemakaian.users'])
-        ->whereHas('pemakaian', function ($query) use ($petugasId) {
-            $query->where('petugas', $petugasId);
-        })
-        ->when($search, function ($query, $search) {
-            return $query->where(function ($q) use ($search) {
-                // Mencari berdasarkan status pembayaran
-                $q->orWhere('status_pembayaran', 'like', "%$search%")
-                  // Mencari berdasarkan nama pelanggan
-                  ->orWhereHas('pemakaian.users', function ($q) use ($search) {
-                      $q->where('nama', 'like', "%$search%");
-                  })
-                  // Mencari berdasarkan alamat pelanggan
-                  ->orWhereHas('pemakaian.users', function ($q) use ($search) {
-                      $q->where('alamat', 'like', "%$search%");
-                  })
-                  // Mencari berdasarkan tanggal pembayaran
-                  ->orWhereDate('tgl_pembayaran', 'like', "%$search%")
-                  // Mencari berdasarkan total tagihan
-                  ->orWhere('jumlah_rp', 'like', "%$search%");
-            });
-        });
+        $transaksi = Transaksi::with(['pemakaian.users'])
+            ->whereHas('pemakaian', function ($query) use ($petugasId) {
+                $query->where('petugas', $petugasId);
+            })
+            ->when($search, function ($query, $search) {
+                return $query->where(function ($q) use ($search) {
+                    $q->orWhere('status_pembayaran', 'like', "%$search%")
+                    ->orWhereHas('pemakaian.users', function ($q) use ($search) {
+                        $q->where('nama', 'like', "%$search%");
+                    })
+                    ->orWhereHas('pemakaian.users', function ($q) use ($search) {
+                        $q->where('alamat', 'like', "%$search%");
+                    })
+                    ->orWhereDate('tgl_pembayaran', 'like', "%$search%")
+                    ->orWhere('jumlah_rp', 'like', "%$search%");
+                });
+            })
+            ->latest() 
+            ->paginate(10);  // <-- Tambah paginate di sini
 
-        // Ambil hanya field yang diinginkan
+        // Ubah data menjadi format yang diinginkan
         $data = $transaksi->getCollection()->map(function ($item) {
             return [
                 'id_transaksi'       => $item->id_transaksi,
@@ -51,9 +48,8 @@ class TransaksiController extends Controller
                 'id_pelanggan'       => $item->pemakaian->users->id_users ?? null,
                 'nama_pelanggan'     => $item->pemakaian->users->nama ?? '-',
                 'alamat_pelanggan' => $item->pemakaian && $item->pemakaian->users
-                ? trim("{$item->pemakaian->users->alamat}, RT {$item->pemakaian->users->rt} RW {$item->pemakaian->users->rw}")
-                : '-',
-
+                    ? trim("{$item->pemakaian->users->alamat}, RT {$item->pemakaian->users->rt} RW {$item->pemakaian->users->rw}")
+                    : '-',
                 'tanggal_pencatatan' => $item->pemakaian->waktu_catat ?? null,
                 'tanggal_pembayaran' => $item->tgl_pembayaran,
                 'meter_awal'         => $item->pemakaian->meter_awal ?? null,
@@ -61,16 +57,17 @@ class TransaksiController extends Controller
                 'jumlah_pemakaian'   => $item->pemakaian->jumlah_pemakaian ?? null,
                 'denda'              => $item->rp_denda,
                 'total_tagihan'      => $item->jumlah_rp,
-                'foto_meteran'       => $item->pemakaian->foto_meteran??null,  
+                'foto_meteran'       => $item->pemakaian->foto_meteran ?? null,  
                 'status_pembayaran'  => $item->tgl_pembayaran ? 'Lunas' : null,
                 'detail_biaya'       => json_decode($item->detail_biaya),
             ];
         });
 
-        // Gabungkan dengan informasi paginasi
+        // Gabungkan lagi dengan paginasi
         $paginated = $transaksi->toArray();
         $paginated['data'] = $data;
 
+        // Response JSON
         return response()->json([
             'success' => true,
             'message' => 'Data transaksi berhasil diambil',

@@ -13,7 +13,8 @@ class KeluhanController extends Controller
         $search = $request->query('search');
         $perPage = $request->query('per_page', 10);
 
-        $keluhan = Keluhan::when($search, function ($query, $search) {
+        $keluhan = Keluhan::with('users')
+            ->when($search, function ($query, $search) {
                 return $query->where('keterangan', 'like', "%$search%")
                             ->orWhere('tanggapan', 'like', "%$search%");
             })
@@ -25,7 +26,10 @@ class KeluhanController extends Controller
             return [
                 'id_keluhan'   => $item->id_keluhan,
                 'id_users'     => $item->id_users,
+                'nama_pelapor' => $item->users->nama ?? '-',
+                'no_hp'         => $item->users->no_hp ?? '-',
                 'keterangan'   => $item->keterangan,
+                'status'       => $item->status,
                 'foto_keluhan' => $item->foto_keluhan,
                 'tanggal'      => $item->tanggal,
                 'tanggapan'    => $item->tanggapan,
