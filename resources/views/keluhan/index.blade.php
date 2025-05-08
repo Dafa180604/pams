@@ -22,8 +22,7 @@
                                 Data users Keluhan
                             </h4>
                             <div class="d-flex align-items-center flex-wrap text-nowrap">
-                                <a href="{{ route('keluhan.create') }}"
-                                    class="btn btn-primary d-flex align-items-center">
+                                <a href="{{ route('keluhan.create') }}" class="btn btn-primary d-flex align-items-center">
                                     <i class="btn-icon-prepend" data-feather="plus-square"></i>
                                     <span class="ms-2">Tambah Data</span>
                                 </a>
@@ -52,12 +51,18 @@
                                             <td>{{ $user->nama ?? '-' }}</td>
 
                                             <!-- <td>{{ $data->keterangan }}</td> -->
-                                            <td style="color: 
-                                                {{ $data->status === 'Terkirim' ? '#FF3366' : 
-                                                ($data->status === 'Dibaca' ? '#FFC107' : 
-                                                ($data->status === 'Diproses' ? '#28a745' : '#6c757d')) }};">
-                                                {{ $data->status }}
+                                            <td>
+                                                @php
+                                                    $badgeClass = match ($data->status) {
+                                                        'Terkirim' => 'badge bg-danger',
+                                                        'Dibaca' => 'badge bg-warning text-dark',
+                                                        'Diproses' => 'badge bg-success',
+                                                        default => 'badge bg-secondary',
+                                                    };
+                                                @endphp
+                                                <span class="{{ $badgeClass }}">{{ $data->status }}</span>
                                             </td>
+
 
                                             <td>{{ $data->tanggal }}</td>
                                             <td>
@@ -67,8 +72,9 @@
                                                     onclick="openImage('{{strpos($data->foto_keluhan, 'storage.googleapis.com') !== false ? $data->foto_keluhan : asset('storage/' . $data->foto_keluhan) }}')">
                                             </td>
                                             <td>
-                                            <a href="{{route('keluhan.edit', $data->id_keluhan)}}" class="btn btn-info">Detail</a>
-                                           
+                                                <a href="{{route('keluhan.edit', $data->id_keluhan)}}"
+                                                    class="btn btn-info">Detail</a>
+
                                             </td>
                                         </tr>
                                     @endforeach

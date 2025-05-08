@@ -40,7 +40,8 @@
                                             </tr>
                                             <tr>
                                                 <td class="fw-bold">Alamat</td>
-                                                <td>: {{ $user->alamat ?? '-' }}, RT: {{ $user->rt ?? '-' }}, RW: {{ $user->rw ?? '-' }}</td>
+                                                <td>: {{ $user->alamat ?? '-' }}, RT: {{ $user->rt ?? '-' }}, RW:
+                                                    {{ $user->rw ?? '-' }}</td>
                                             </tr>
                                             <tr>
                                                 <td class="fw-bold">No. Telepon</td>
@@ -48,13 +49,19 @@
                                             </tr>
                                             <tr>
                                                 <td class="fw-bold">Status</td>
-                                                <td style="color: 
-                                                {{ $data->status === 'Terkirim' ? '#FF3366' : 
-                                                ($data->status === 'Dibaca' ? '#FFC107' : 
-                                                ($data->status === 'Diproses' ? '#28a745' : '#6c757d')) }};">
-                                                :{{ $data->status }}
-                                            </td>
+                                                <td>
+                                                    @php
+                                                        $badgeClass = match ($data->status) {
+                                                            'Terkirim' => 'badge bg-danger',
+                                                            'Dibaca' => 'badge bg-warning text-dark',
+                                                            'Diproses' => 'badge bg-success',
+                                                            default => 'badge bg-secondary',
+                                                        };
+                                                    @endphp
+                                                    :<span class="{{ $badgeClass }}">{{ $data->status }}</span>
+                                                </td>
                                             </tr>
+
                                         </table>
                                     </div>
                                 </div>
@@ -69,8 +76,8 @@
                                     <div class="card-body text-center">
                                         @if(!empty($data->foto_keluhan))
                                             @if(Str::startsWith($data->foto_keluhan, 'https://'))
-                                                <img src="{{ $data->foto_keluhan }}" alt="Foto Keluhan"
-                                                    class="img-fluid rounded" style="max-height: 250px;">
+                                                <img src="{{ $data->foto_keluhan }}" alt="Foto Keluhan" class="img-fluid rounded"
+                                                    style="max-height: 250px;">
                                             @else
                                                 <img src="{{ asset('storage/' . $data->foto_keluhan) }}" alt="Foto Keluhan"
                                                     class="img-fluid rounded" style="max-height: 250px;">
@@ -107,19 +114,16 @@
                                         <h5 class="card-title text-primary mb-0">Berikan Tanggapan</h5>
                                     </div>
                                     <div class="card-body">
-                                        <form id="keluhanForm" method="POST" action="{{ route('keluhan.update', $data->id_keluhan) }}">
+                                        <form id="keluhanForm" method="POST"
+                                            action="{{ route('keluhan.update', $data->id_keluhan) }}">
                                             @csrf
                                             @method('PUT')
                                             <input type="hidden" name="users" value="{{ $user->id_users ?? '' }}">
 
                                             <div class="form-group">
                                                 <label for="tanggapan" class="form-label">Tanggapan</label>
-                                                <textarea
-                                                    class="form-control @error('tanggapan') is-invalid @enderror"
-                                                    id="tanggapan"
-                                                    name="tanggapan"
-                                                    rows="4"
-                                                    required
+                                                <textarea class="form-control @error('tanggapan') is-invalid @enderror"
+                                                    id="tanggapan" name="tanggapan" rows="4" required
                                                     placeholder="Masukkan tanggapan untuk keluhan ini...">{{ old('tanggapan', $data->tanggapan ?? '') }}</textarea>
                                                 @error('tanggapan')
                                                     <div class="invalid-feedback">{{ $message }}</div>
