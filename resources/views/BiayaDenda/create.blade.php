@@ -31,9 +31,9 @@
                                 </div>
                                 <div class="col-sm-6">
                                     <div class="mb-3">
-                                        <label class="form-label">Biaya Telat (%)</label>
+                                        <label class="form-label">Biaya Telat (Rp)</label>
                                         <input type="text" name="biaya_telat" class="form-control"
-                                            placeholder="Masukkan Biaya Telat (%)">
+                                            placeholder="Masukkan Biaya Telat (Rp)">
                                         @error('biaya_telat')
                                             <div class="text-danger">{{ $message }}</div>
                                         @enderror
@@ -45,13 +45,13 @@
                         </form>
                         <div class="mt-3">
                             <small class="text-muted d-block">
-                                <strong>NB:</strong> Jumlah telat (hari) dan biaya telat (%) tidak boleh lebih kecil dari
+                                <strong>NB:</strong> Jumlah telat (hari) dan biaya telat (Rp) tidak boleh lebih kecil dari
                                 data sebelumnya atau data dengan nilai terbesar yang sudah ada.
                             </small>
                             <small class="text-muted d-block">
                                 <strong>Data Saat Ini:</strong> Jumlah Telat Maksimal:
                                 <strong>{{ $maxJumlahTelat ?? 0 }}</strong> hari, Biaya Telat Maksimal:
-                                <strong>{{ $maxBiayaTelat ?? 0 }}%</strong>
+                                <strong>Rp.{{ $maxBiayaTelat ?? 0 }}</strong>
                             </small>
                         </div>
                     </div>

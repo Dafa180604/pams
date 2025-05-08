@@ -31,7 +31,7 @@
                                     <tr>
                                         <th>NO.</th>
                                         <th>Jumlah Telat Hari</th>
-                                        <th>Biaya Telat (%)</th>
+                                        <th>Biaya Telat (Rp)</th>
                                         <th>AKSI</th>
                                     </tr>
                                 </thead>
@@ -41,7 +41,7 @@
 
                                             <td>{{ $loop->iteration }}</td>
                                             <td>{{ $data->jumlah_telat }} Hari</td>
-                                            <td>{{ $data->biaya_telat }} %</td>
+                                            <td>Rp.{{ $data->biaya_telat }}</td>
                                             <td>
                                                 <!-- <a href="{{route('BiayaDenda.edit', $data->id_biaya_denda)}}" class="btn btn-warning">Edit</a> -->
                                                 @if ($loop->last)

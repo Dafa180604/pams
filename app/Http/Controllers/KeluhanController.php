@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Keluhan;
 use Illuminate\Http\Request;
 use Google\Cloud\Storage\StorageClient;
-use Illuminate\Support\Facades\Http;
 
 class KeluhanController extends Controller
 {
@@ -80,28 +79,6 @@ class KeluhanController extends Controller
             $keluhan->save();
         }
 
-        // Simpan data ke Firebase Realtime Database dengan ID yang sama
-        $firebaseUrl = 'https://dafaq-542a5-default-rtdb.asia-southeast1.firebasedatabase.app/keluhan/' . $keluhan->id_keluhan . '.json';
-
-        $firebaseData = [
-            'id_keluhan' => $keluhan->id_keluhan,
-            'id_users' => $keluhan->id_users,
-            'keterangan' => $keluhan->keterangan,
-            'tanggal' => $keluhan->tanggal,
-            'foto_keluhan' => $keluhan->foto_keluhan,
-            'tanggapan' => null,
-            'created_at' => now()->toDateTimeString(),
-            'updated_at' => now()->toDateTimeString(),
-        ];
-
-        $response = Http::put($firebaseUrl, $firebaseData);
-
-        if ($response->failed()) {
-            // Jika gagal menyimpan ke Firebase, hapus data lokal yang sudah disimpan
-            $keluhan->delete();
-            throw new \Exception('Gagal menyimpan data ke Firebase');
-        }
-
         return redirect()->route('keluhan.index')->with('success', 'Data berhasil ditambahkan.');
     }
 
@@ -117,17 +94,17 @@ class KeluhanController extends Controller
      * Show the form for editing the specified resource.
      */
     public function edit(string $id_keluhan)
-{
-    $keluhan = Keluhan::findOrFail($id_keluhan);
+    {
+        $keluhan = Keluhan::findOrFail($id_keluhan);
 
-    // Hanya ubah status jika awalnya 'Terkirim'
-    if ($keluhan->status === 'Terkirim') {
-        $keluhan->status = 'Dibaca';
-        $keluhan->save();
+        // Hanya ubah status jika awalnya 'Terkirim'
+        if ($keluhan->status === 'Terkirim') {
+            $keluhan->status = 'Dibaca';
+            $keluhan->save();
+        }
+
+        return view('keluhan.edit', ['data' => $keluhan]);
     }
-
-    return view('keluhan.edit', ['data' => $keluhan]);
-}
 
     /**
      * Update the specified resource in storage.
@@ -147,21 +124,6 @@ class KeluhanController extends Controller
             $data->tanggapan = $request->tanggapan;
             $data->status = $request->status ?? 'Diproses';
             $data->save();
-
-            // Update data di Firebase Realtime Database pada path yang sama berdasarkan ID
-            $firebaseUrl = 'https://dafaq-542a5-default-rtdb.asia-southeast1.firebasedatabase.app/keluhan/' . $id_keluhan . '.json';
-
-            $firebaseData = [
-                'tanggapan' => $request->tanggapan,
-                'updated_at' => now()->toDateTimeString(),
-            ];
-
-            // Gunakan PATCH untuk hanya mengupdate field yang diubah
-            $response = Http::patch($firebaseUrl, $firebaseData);
-
-            if ($response->failed()) {
-                throw new \Exception('Gagal memperbarui data di Firebase');
-            }
 
             return redirect('/keluhan')->with('update', 'Data berhasil diperbarui.');
         } catch (\Exception $e) {

@@ -34,7 +34,7 @@
                                 </div>
                                 <div class="col-sm-6">
                                     <div class="mb-3">
-                                        <label class="form-label">Biaya Telat (%)</label>
+                                        <label class="form-label">Biaya Telat (Rp)</label>
                                         <input type="text" name="biaya_telat" class="form-control"
                                         value="{{ old('biaya_telat', $data->biaya_telat) }}"
                                             placeholder="Masukkan Biaya Telat (%)">

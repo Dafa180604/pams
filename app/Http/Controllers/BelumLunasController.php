@@ -69,70 +69,78 @@ class BelumLunasController extends Controller
      * Show the form for editing the specified resource.
      */
     public function edit(string $id_transaksi)
-{
-    // Find the transaction with related data
-    $data = Transaksi::with(['pemakaian'])->find($id_transaksi);
-    if ($data) {
-        // Calculate days since the recording date
-        $waktuCatat = new DateTime($data->pemakaian->waktu_catat);
-        $today = new DateTime();
-        $interval = $waktuCatat->diff($today);
-        $daysDifference = $interval->days;
-        // Only apply late fee if at least 2 days late (according to your image)
-        if ($daysDifference >= 2 && !$data->id_biaya_denda) {
-            // Get all late fee categories
-            $allDendaCategories = BiayaDenda::orderBy('jumlah_telat', 'asc')->get();
-            $biayaDenda = null;
-            // Find the appropriate category based on days difference
-            foreach ($allDendaCategories as $index => $category) {
-                $currentThreshold = $category->jumlah_telat;
-                // Find the next threshold if available
-                $nextThreshold = PHP_INT_MAX; // Default to maximum value
-                if (isset($allDendaCategories[$index + 1])) {
-                    $nextThreshold = $allDendaCategories[$index + 1]->jumlah_telat;
+    {
+        // Find the transaction with related data
+        $data = Transaksi::with(['pemakaian'])->find($id_transaksi);
+        if ($data) {
+            // Calculate days since the recording date
+            $waktuCatat = new DateTime($data->pemakaian->waktu_catat);
+            $today = new DateTime();
+            $interval = $waktuCatat->diff($today);
+            $daysDifference = $interval->days;
+
+            // Only apply late fee if at least 1 day late and no fee has been applied yet
+            if ($daysDifference >= 1 && !$data->id_biaya_denda) {
+                // Find the appropriate late fee entry based on days late
+                $biayaDenda = BiayaDenda::where('jumlah_telat', $daysDifference)
+                    ->first();
+
+                // If no exact match, find the closest category
+                if (!$biayaDenda) {
+                    // Get all late fee categories
+                    $allDendaCategories = BiayaDenda::orderBy('jumlah_telat', 'asc')->get();
+
+                    // Find the appropriate category based on days difference
+                    foreach ($allDendaCategories as $category) {
+                        if ($daysDifference >= $category->jumlah_telat) {
+                            $biayaDenda = $category;
+                        } else {
+                            // Stop once we've passed the relevant threshold
+                            break;
+                        }
+                    }
                 }
-                // Check if days difference falls in this range
-                if ($daysDifference >= $currentThreshold && $daysDifference < $nextThreshold) {
-                    $biayaDenda = $category;
-                    break;
+
+                // If a matching late fee category is found
+                if ($biayaDenda) {
+                    // Use the direct Rupiah amount from the biaya_telat column
+                    $rpDenda = $biayaDenda->biaya_telat;
+
+                    // Update the transaction data with late fee information
+                    $data->id_biaya_denda = $biayaDenda->id_biaya_denda;
+                    $data->rp_denda = $rpDenda;
+
+                    // Update the total amount to include the late fee
+                    $originalTotal = $data->jumlah_rp;
+                    $data->jumlah_rp = $originalTotal + $rpDenda;
+
+                    // Update the detail_biaya JSON to include late fee
+                    $detailBiaya = json_decode($data->detail_biaya, true);
+                    $detailBiaya['denda'] = [
+                        'id' => $biayaDenda->id_biaya_denda,
+                        'jumlah_telat' => $daysDifference, // Actual days late
+                        'biaya_telat' => $rpDenda, // Direct Rupiah amount
+                        'rp_denda' => $rpDenda  // Same as biaya_telat since it's a direct amount
+                    ];
+                    $data->detail_biaya = json_encode($detailBiaya);
+
+                    // Save the updated transaction
+                    $data->save();
+
+                    // Refresh the data after updates
+                    $data = Transaksi::with(['pemakaian'])->find($id_transaksi);
                 }
-            }
-            // If a matching late fee category is found
-            if ($biayaDenda) {
-                // Calculate the late fee (percentage)
-                $percentageFee = $biayaDenda->biaya_telat;
-                $rpDenda = $data->jumlah_rp * ($percentageFee / 100);
-                // Update the transaction data with late fee information
-                $data->id_biaya_denda = $biayaDenda->id_biaya_denda;
-                $data->rp_denda = $rpDenda;
-                // Update the total amount to include the late fee
-                $originalTotal = $data->jumlah_rp;
-                $data->jumlah_rp = $originalTotal + $rpDenda;
-                // Update the detail_biaya JSON to include late fee
-                $detailBiaya = json_decode($data->detail_biaya, true);
-                $detailBiaya['denda'] = [
-                    'id' => $biayaDenda->id_biaya_denda,
-                    'jumlah_telat' => $daysDifference, // Actual days late
-                    'biaya_telat' => $biayaDenda->biaya_telat, // Percentage value
-                    'rp_denda' => $rpDenda  // Calculated amount
-                ];
-                $data->detail_biaya = json_encode($detailBiaya);
-                // Save the updated transaction
-                $data->save();
-                // Refresh the data after updates
-                $data = Transaksi::with(['pemakaian'])->find($id_transaksi);
             }
         }
+
+        // Get petugas user data
+        $petugasUser = null;
+        if ($data && $data->pemakaian && $data->pemakaian->petugas) {
+            $petugasUser = Users::find($data->pemakaian->petugas);
+        }
+
+        return view('belumlunas.edit', compact('data', 'petugasUser'));
     }
-    
-    // Get petugas user data
-    $petugasUser = null;
-    if ($data && $data->pemakaian && $data->pemakaian->petugas) {
-        $petugasUser = Users::find($data->pemakaian->petugas);
-    }
-    
-    return view('belumlunas.edit', compact('data', 'petugasUser'));
-}
 
     /**
      * Update the specified resource in storage.
