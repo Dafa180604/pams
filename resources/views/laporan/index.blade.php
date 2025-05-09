@@ -32,10 +32,15 @@
                                     <input type="month" name="end_date" id="end_date" class="form-control"
                                         value="{{ request('end_date', date('Y-m')) }}">
                                 </div>
-                                <div class="col-md-3 align-self-end">
-                                    <button type="button" class="btn btn-success" onclick="printTable()">
-                                        <i data-feather="printer"></i> Print
-                                    </button>
+                                <div class="col-md-6 align-self-end">
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-success me-2" onclick="printTable()">
+                                            <i data-feather="printer"></i> Print
+                                        </button>
+                                        <button type="button" class="btn btn-primary" onclick="exportToWord()">
+                                            <i data-feather="file-text"></i> Export ke Word
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </form>
@@ -46,7 +51,7 @@
                                     <tr>
                                         <th>NO.</th>
                                         <th>KETERANGAN</th>
-                                        <th>TANGGAL</th>
+                                        <!-- <th>TANGGAL</th> -->
                                         <th>DEBIT</th>
                                         <th>KREDIT</th>
                                         <th>SISA SALDO</th>
@@ -55,14 +60,14 @@
                                 <tbody>
                                     <!-- Display saldo awal only if it's not zero -->
                                     @if($previousSaldo != 0)
-                                    <tr class="table-secondary">
-                                        <td>-</td>
-                                        <td><strong>Saldo Awal</strong></td>
-                                        <td>{{ $startDate }}</td>
-                                        <td>-</td>
-                                        <td>-</td>
-                                        <td><strong>Rp {{ number_format($previousSaldo, 0, ',', '.') }}</strong></td>
-                                    </tr>
+                                        <tr class="table-secondary">
+                                            <td>-</td>
+                                            <td><strong>Saldo Awal</strong></td>
+                                            <!-- <td>{{ $startDate }}</td> -->
+                                            <td>-</td>
+                                            <td>-</td>
+                                            <td><strong>Rp {{ number_format($previousSaldo, 0, ',', '.') }}</strong></td>
+                                        </tr>
                                     @endif
 
                                     @php
@@ -77,7 +82,7 @@
                                         <tr>
                                             <td>{{ $counter++ }}</td>
                                             <td>{{ $data->keterangan }}</td>
-                                            <td>{{ $data->tanggal }}</td>
+                                            <!-- <td>{{ $data->tanggal }}</td> -->
                                             <td>Rp {{ number_format($data->uang_masuk, 0, ',', '.') }}</td>
                                             <td>Rp {{ number_format($data->uang_keluar, 0, ',', '.') }}</td>
                                             <td>Rp {{ number_format($runningSaldo, 0, ',', '.') }}</td>
@@ -93,52 +98,130 @@
     </div>
 
     <script>
-        // Print only the table - fixed version
-        function printTable() {
-            // Create a new window for printing
-            const printWindow = window.open('', '_blank');
+        // Format tanggal untuk judul laporan
+        function formatDateToMonthYear(dateStr) {
+            const bulan = [
+                'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+                'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+            ];
+            const date = new Date(dateStr);
+            return {
+                monthYear: `${bulan[date.getMonth()]} ${date.getFullYear()}`,
+                month: date.getMonth(),
+                year: date.getFullYear()
+            };
+        }
 
-            // Get the current date filters
+        // Fungsi untuk mendapatkan teks periode laporan
+        function getPeriodeText() {
             const startDate = document.getElementById('start_date').value;
             const endDate = document.getElementById('end_date').value;
+            
+            const start = formatDateToMonthYear(startDate);
+            const end = formatDateToMonthYear(endDate);
 
-            // Create content for the print window
+            // Jika bulan dan tahun sama, tampilkan satu saja
+            return (start.month === end.month && start.year === end.year)
+                ? `${start.monthYear}`
+                : `${start.monthYear} - ${end.monthYear}`;
+        }
+
+        // Print only the table - fixed version
+        function printTable() {
+            const printWindow = window.open('', '_blank');
+            const periodeText = getPeriodeText();
+
             let printContent = `
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <title>Laporan Keuangan</title>
-                        <style>
-                            body { font-family: Arial, sans-serif; }
-                            h3 { text-align: center; margin-bottom: 10px; }
-                            p { text-align: center; margin-bottom: 20px; }
-                            table { width: 100%; border-collapse: collapse; }
-                            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                            th { background-color: #f2f2f2; }
-                            .text-end { text-align: right; }
-                            .table-secondary { background-color: #e2e3e5; }
-                        </style>
-                    </head>
-                    <body>
-                        <h3>Laporan Keuangan</h3>
-                        <p>Periode: ${startDate} - ${endDate}</p>
-                        ${document.getElementById('report-table').innerHTML}
-                    </body>
-                    </html>
-                `;
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>LAPORAN PERTANGGUNG JAWABAN PKS-PAMS DESA TENGGERLOR</title>
+                <style>
+                    body { font-family: Arial, sans-serif; }
+                    h3 { text-align: center; margin-bottom: 10px; }
+                    p { text-align: center; margin-bottom: 20px; }
+                    table { width: 100%; border-collapse: collapse; }
+                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                    th { background-color: #f2f2f2; }
+                    .text-end { text-align: right; }
+                    .table-secondary { background-color: #e2e3e5; }
+                </style>
+            </head>
+            <body>
+                <div style="text-align: center; line-height: 1.2;">
+                    <h3 style="margin: 0;">LAPORAN PERTANGGUNG JAWABAN</h3>
+                    <h3 style="margin: 0;">KPS-PAMS DESA TENGGERLOR</h3>
+                </div>
+                <p>Periode: ${periodeText}</p>
+                ${document.getElementById('report-table').innerHTML}
+            </body>
+            </html>
+            `;
 
-            // Write to the new window and trigger print
             printWindow.document.write(printContent);
             printWindow.document.close();
 
-            // Add event listener for when content is loaded
             printWindow.onload = function () {
                 printWindow.print();
-                // Close the window after printing (with a delay)
-                setTimeout(function () {
-                    printWindow.close();
-                }, 1000);
+                setTimeout(() => printWindow.close(), 1000);
             };
+        }
+
+        // Export to Word function
+        function exportToWord() {
+            const periodeText = getPeriodeText();
+            
+            // Buat template HTML untuk Word
+            const wordTemplate = `
+            <html xmlns:o="urn:schemas-microsoft-com:office:office" 
+                  xmlns:w="urn:schemas-microsoft-com:office:word" 
+                  xmlns="http://www.w3.org/TR/REC-html40">
+            <head>
+                <meta charset="utf-8">
+                <title>LAPORAN PERTANGGUNG JAWABAN PKS-PAMS DESA TENGGERLOR</title>
+                <style>
+                    @page {
+                        size: 21cm 29.7cm;  /* A4 */
+                        margin: 2cm;
+                    }
+                    body { font-family: 'Arial', sans-serif; }
+                    h3 { text-align: center; margin-bottom: 10px; }
+                    p { text-align: center; margin-bottom: 20px; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                    th, td { border: 1px solid #000; padding: 8px; }
+                    th { background-color: #f2f2f2; font-weight: bold; }
+                    .table-secondary { background-color: #e2e3e5; }
+                </style>
+                <!--[if gte mso 9]>
+                <xml>
+                    <w:WordDocument>
+                        <w:View>Print</w:View>
+                        <w:Zoom>100</w:Zoom>
+                    </w:WordDocument>
+                </xml>
+                <![endif]-->
+            </head>
+            <body>
+                <div style="text-align: center; line-height: 1.2;">
+                    <h3 style="margin: 0;">LAPORAN PERTANGGUNG JAWABAN</h3>
+                    <h3 style="margin: 0;">KPS-PAMS DESA TENGGERLOR</h3>
+                </div>
+                <p>Periode: ${periodeText}</p>
+                ${document.getElementById('report-table').innerHTML}
+            </body>
+            </html>
+            `;
+
+            // Buat Blob dan href untuk download
+            const blob = new Blob([wordTemplate], { type: 'application/msword' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `Laporan_KPS_PAMS_${periodeText.replace(/\s/g, '_')}.doc`;
+            
+            // Klik link secara programatis untuk memicu download
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         // Auto-submit form when input values change

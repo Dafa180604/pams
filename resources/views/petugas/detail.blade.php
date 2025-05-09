@@ -43,13 +43,20 @@
                                                     <input type="month" name="end_date" id="end_date" class="form-control"
                                                         value="{{ request('end_date', date('Y-m')) }}">
                                                 </div>
+                                                <div class="col-md-3 col-12">
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold">Total Transaksi</label>
+                                                        <input type="text" class="form-control"
+                                                            value="{{ $totalTransaksi }}" disabled>
+                                                    </div>
+                                                </div>
                                             </div>
+
                                         </form>
                                     </div>
                                 </div>
                             </div>
                         </div>
-
                         <div class="overflow-auto">
                             <table class="table-auto w-full text-left bg-white shadow-md rounded-lg">
                                 <thead class="bg-gray-100">

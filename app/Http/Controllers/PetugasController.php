@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Pemakaian;
+use App\Models\Transaksi;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Models\Users;
@@ -17,34 +18,61 @@ class PetugasController extends Controller
     }
 
     public function show($id, Request $request)
-{
-    // Cari data petugas termasuk yang sudah soft delete
-    $data = Users::withTrashed()->findOrFail($id);
-
-    // Query pemakaian berdasarkan ID petugas
-    $pemakaianQuery = Pemakaian::where('petugas', $data->id_users);
-
-    // Filter berdasarkan bulan jika ada
-    if ($request->has('end_date')) {
-        $selectedMonth = $request->input('end_date');
-        $startDate = Carbon::createFromFormat('Y-m', $selectedMonth)->startOfMonth();
-        $endDate = Carbon::createFromFormat('Y-m', $selectedMonth)->endOfMonth();
-
-        $pemakaianQuery->whereBetween('waktu_catat', [$startDate, $endDate]);
+    {
+        // Cari data petugas termasuk yang sudah soft delete
+        $data = Users::withTrashed()->findOrFail($id);
+        
+        // Query pemakaian berdasarkan ID petugas
+        $pemakaianQuery = Pemakaian::where('petugas', $data->id_users);
+        
+        // Filter berdasarkan bulan jika ada
+        if ($request->has('end_date')) {
+            $selectedMonth = $request->input('end_date');
+            $startDate = Carbon::createFromFormat('Y-m', $selectedMonth)->startOfMonth();
+            $endDate = Carbon::createFromFormat('Y-m', $selectedMonth)->endOfMonth();
+            $pemakaianQuery->whereBetween('waktu_catat', [$startDate, $endDate]);
+        } else {
+            // Default to current month if no date is selected
+            $startDate = Carbon::now()->startOfMonth();
+            $endDate = Carbon::now()->endOfMonth();
+            $pemakaianQuery->whereBetween('waktu_catat', [$startDate, $endDate]);
+        }
+        
+        // Calculate total transactions amount for the filtered period
+        // Assuming there's a relationship between Pemakaian and Transaksi or a price field
+        // Adjust this calculation based on your actual database structure
+        $totalTransaksi = 0;
+        
+        // Option 1: If you have a direct price/amount field in Pemakaian table
+        // $totalTransaksi = $pemakaianQuery->sum('amount');
+        
+        // Option 2: If transactions are in a separate related table (more common scenario)
+        // Get pemakaian IDs for the filtered period
+        $pemakaianIds = $pemakaianQuery->pluck('id_pemakaian')->toArray();
+        
+        // Calculate total from Transaksi table based on these pemakaian IDs
+        if (!empty($pemakaianIds)) {
+            $totalTransaksi = Transaksi::whereIn('id_pemakaian', $pemakaianIds)->sum('jumlah_rp');
+        }
+        
+        // Format total transaction amount
+        $formattedTotal = 'Rp ' . number_format($totalTransaksi, 0, ',', '.');
+        
+        // Ambil data pemakaian dan user (termasuk soft deleted)
+        $pencatatan = $pemakaianQuery->with([
+            'users' => function ($query) {
+                $query->withTrashed();
+            }
+        ])
+            ->orderBy('waktu_catat', 'desc')
+            ->paginate(10);
+            
+        return view('petugas.detail', [
+            'data' => $data,
+            'pencatatan' => $pencatatan,
+            'totalTransaksi' => $formattedTotal
+        ]);
     }
-
-    // Ambil data pemakaian dan user (termasuk soft deleted)
-    $pencatatan = $pemakaianQuery->with(['users' => function ($query) {
-        $query->withTrashed();
-    }])
-    ->orderBy('waktu_catat', 'desc')
-    ->paginate(10);
-
-    return view('petugas.detail', [
-        'data' => $data,
-        'pencatatan' => $pencatatan
-    ]);
-}
 
 
 

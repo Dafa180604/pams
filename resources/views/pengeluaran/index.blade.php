@@ -31,6 +31,7 @@
                                     <th>NO.</th>
                                     <th>TARIF</th>
                                     <th>KETERANGAN</th>
+                                    <th>TANGGAL</th>
                                     <th>AKSI</th>
                                 </tr>
                             </thead>
@@ -41,6 +42,7 @@
                                         <td>{{$loop->iteration}}</td>
                                         <td>Rp {{ number_format($data->uang_keluar, 0, ',', '.') }}</td>
                                         <td>{{ $data->keterangan }}</td>
+                                        <td>{{ $data->tanggal }}</td>
                                         <td>
                                             <a href="{{ route('pengeluaran.edit',$data->id_laporan) }}" class="btn btn-warning">Edit</a>
                                             <form action="{{route('pengeluaran.destroy', $data->id_laporan)}}" method="POST" style="display:inline;">

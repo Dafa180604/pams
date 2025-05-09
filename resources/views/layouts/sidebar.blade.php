@@ -13,7 +13,7 @@
     <ul class="nav">
       <li class="nav-item nav-category">Menu</li>
       <li class="nav-item">
-        <a href="" class="nav-link">
+        <a href="{{route('DashboardAdmin.index')}}" class="nav-link">
           <i class="link-icon" data-feather="home"></i>
           <span class="link-title">Dashboard</span>
         </a>
