@@ -15,7 +15,7 @@ class AuthController extends Controller
             // Periksa peran pengguna
             if (Auth::user()->role === 'admin') {
                 $successMessage = 'Anda berhasil masuk sebagai <br>' . Auth::user()->nama;
-                return redirect()->route('petugas.index')->with('successlogin', $successMessage);
+                return redirect()->route('DashboardAdmin.index')->with('successlogin', $successMessage);
             } elseif (Auth::user()->role === 'petugas') {
                 $successMessage = 'Anda berhasil masuk sebagai <br>' . Auth::user()->nama;
                 return redirect()->route('belumlunas.index')->with('successlogin', $successMessage);
@@ -50,7 +50,7 @@ class AuthController extends Controller
             // Periksa peran pengguna
             if ($user->role === 'admin') {
                 $successMessage = 'Anda berhasil masuk sebagai <br>' . Auth::user()->nama;
-                return redirect()->route('petugas.index')->with('successlogin', $successMessage);
+                return redirect()->route('DashboardAdmin.index')->with('successlogin', $successMessage);
             } elseif ($user->role === 'petugas') {
                 $successMessage = 'Anda berhasil masuk sebagai <br>' . Auth::user()->nama;
                 return redirect()->route('belumlunas.index')->with('successlogin', $successMessage);

@@ -61,4 +61,9 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('/EditSalahCatat', EditSalahCatatController::class);
         Route::resource('/keluhan', KeluhanController::class);
         Route::resource('/DashboardAdmin', DashboardAdminController::class);
+        Route::get('/api/laporan-data', [DashboardAdminController::class, 'getLaporanData'])->name('api.laporan-data');
+// Add this to your routes/api.php file:
+
+Route::get('/laporan-data', [App\Http\Controllers\DashboardAdminController::class, 'getLaporanData']);
+
 });

@@ -53,7 +53,7 @@
               <a href="{{route('kategoribiayaair.index')}}" class="nav-link">Kategori Biaya</a>
             </li>
             <li class="nav-item">
-              <a href="{{route('biayagolongan.index')}}" class="nav-link">Biaya Premium</a>
+              <a href="{{route('biayagolongan.index')}}" class="nav-link">Biaya Instalasi</a>
             </li>
             <li class="nav-item">
               <a href="{{route('BiayaDenda.index')}}" class="nav-link">Biaya Denda</a>
