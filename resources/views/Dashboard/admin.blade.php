@@ -144,9 +144,9 @@
         </div>
 
         <div class="row">
-            <div class="d-flex justify-content-between align-items-baseline mb-2 mt-2 px-3">
+<!--             <div class="d-flex justify-content-between align-items-baseline mb-2 mt-2 px-3">
                 <h5>GRAFIK LAPORAN</h5>
-            </div>
+            </div> -->
             <!-- Bar Chart -->
             <div class="col-xl-12 grid-margin stretch-card">
                 <div class="card">
