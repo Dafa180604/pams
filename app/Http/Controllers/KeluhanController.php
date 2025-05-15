@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Keluhan;
 use Illuminate\Http\Request;
 use Google\Cloud\Storage\StorageClient;
-
 class KeluhanController extends Controller
 {
     /**
@@ -79,7 +78,117 @@ class KeluhanController extends Controller
             $keluhan->save();
         }
 
+        // Kirim notifikasi WhatsApp ke admin menggunakan Fonnte
+        $this->sendWhatsAppNotification($keluhan);
+
         return redirect()->route('keluhan.index')->with('success', 'Data berhasil ditambahkan.');
+    }
+
+    /**
+     * Kirim notifikasi WhatsApp ke admin menggunakan Fonnte API
+     * 
+     * @param Keluhan $keluhan
+     * @return void
+     */
+    private function sendWhatsAppNotification(Keluhan $keluhan)
+    {
+        try {
+            // Dapatkan data user yang mengajukan keluhan dari relasi
+            $users = \App\Models\Users::find($keluhan->id_users);
+            $userName = $users ? $users->nama : 'Pelanggan';
+            $userPhone = $users && $users->no_hp ? $users->no_hp : '-';
+            // Format pesan dengan informasi lebih detail
+            $message = "🔔 *NOTIFIKASI KELUHAN BARU* 🔔\n\n";
+            $message .= "*Detail Keluhan:*\n";
+            $message .= "-----------------------------------\n";
+            $message .= "*ID Keluhan:* " . $keluhan->id_keluhan . "\n";
+            $message .= "*Pelanggan:* " . $userName . "\n";
+            // Format dan tambahkan nomor telepon dengan link chat WhatsApp
+            $formattedPhone = $userPhone;
+            if ($userPhone != '-') {
+                // Pastikan format nomor HP sesuai (hapus karakter 0 di depan jika ada)
+                if (substr($userPhone, 0, 1) === '0') {
+                    $formattedPhone = '62' . substr($userPhone, 1);
+                } elseif (substr($userPhone, 0, 2) !== '62') {
+                    $formattedPhone = '62' . $userPhone;
+                }
+
+                // Buat link chat WhatsApp
+                // $whatsappLink = "https://wa.me/{$formattedPhone}";
+                $message .= "*No. HP:* " . $userPhone . "\n";
+            } else {
+                $message .= "*No. HP:* " . $userPhone . "\n";
+            }
+            // $message .= "*Status:* " . $keluhan->status . "\n\n";
+            $message .= "*Isi Keluhan:*\n" . $keluhan->keterangan . "\n\n";
+
+
+            // Tambahkan link untuk melihat detail keluhan
+            $detailUrl = "https://dev.airtenggerlor.biz.id/keluhan/{$keluhan->id_keluhan}/edit";
+            $message .= "*Lihat Detail & Tanggapi:*\n" . $detailUrl . "\n\n";
+
+            $message .= "Silahkan klik link di atas untuk melihat detail dan menanggapi keluhan pelanggan.";
+
+            // Ambil nomor telepon admin dari tabel users
+            $adminUser = \App\Models\User::where('level', 'admin')->first();
+
+            if ($adminUser && $adminUser->no_hp) {
+                $adminPhone = $adminUser->no_hp;
+
+                // Format nomor HP ke format internasional (62)
+                if (substr($adminPhone, 0, 1) === '0') {
+                    $adminPhone = '62' . substr($adminPhone, 1);
+                } elseif (substr($adminPhone, 0, 2) !== '62') {
+                    $adminPhone = '62' . $adminPhone;
+                }
+            } else {
+                // Fallback jika tidak ditemukan
+                \Log::warning('Admin user atau nomor HP admin tidak ditemukan.');
+                return;
+            }
+
+
+            // Menggunakan cURL sesuai contoh dari Fonnte
+            $curl = curl_init();
+            curl_setopt_array($curl, array(
+                CURLOPT_URL => 'https://api.fonnte.com/send',
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_ENCODING => '',
+                CURLOPT_MAXREDIRS => 10,
+                CURLOPT_TIMEOUT => 0,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                CURLOPT_CUSTOMREQUEST => 'POST',
+                CURLOPT_POSTFIELDS => array(
+                    'target' => $adminPhone,
+                    'message' => $message,
+                    'countryCode' => '62', // Kode negara Indonesia
+                    'device' => '6287769491493', // Device ID
+                    'typing' => true, // Tampilkan efek mengetik sebelum pesan terkirim
+                    'delay' => '2', // Delay 2 detik
+                ),
+                CURLOPT_HTTPHEADER => array(
+                    'Authorization: y2GQtBubUi9fsNNcJfN6'
+                ),
+            ));
+
+            $response = curl_exec($curl);
+
+            // Tangani error cURL jika ada
+            if (curl_errno($curl)) {
+                $error_msg = curl_error($curl);
+                \Log::error('cURL Error: ' . $error_msg);
+            }
+
+            curl_close($curl);
+
+            // Log response untuk debugging
+            \Log::info('WhatsApp notification response: ' . $response);
+
+        } catch (\Exception $e) {
+            // Log error jika terjadi kesalahan
+            \Log::error('Error sending WhatsApp notification: ' . $e->getMessage());
+        }
     }
 
     /**

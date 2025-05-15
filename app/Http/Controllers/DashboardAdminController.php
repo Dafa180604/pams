@@ -42,7 +42,7 @@ class DashboardAdminController extends Controller
             ->where('status_pembayaran', 'Belum Bayar')
             ->count();
 
-        return view('dashboard.admin', compact('years', 'customerCount', 'staffCount', 'transactionCount', 'paidTransactions', 'unpaidTransactions'));
+        return view('Dashboard.admin', compact('years', 'customerCount', 'staffCount', 'transactionCount', 'paidTransactions', 'unpaidTransactions'));
     }
 
     public function getLaporanData(Request $request)

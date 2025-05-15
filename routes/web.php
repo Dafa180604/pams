@@ -34,7 +34,7 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['auth', 'role:petugas'])->group(function () {
         Route::resource('/pemakaian', PemakaianController::class);
         Route::get('/pemakaian/{id_users}/meter-akhir', [PemakaianController::class, 'getMeterAkhir']);
-        
+
     });
 
     Route::middleware(['auth', 'role:admin'])->group(function () {
@@ -54,16 +54,17 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('/pemakaian', PemakaianController::class);
         Route::get('/pemakaian/{id_users}/meter-akhir', [PemakaianController::class, 'getMeterAkhir']);
         //
-        Route::post('pemakaian/bayar', [PemakaianController::class, 'bayar'])->name('pemakaian.bayar');  });
-        Route::resource('/pengeluaran', PengeluaranController::class);
-        Route::resource('/laporan', LaporanController::class);
-        Route::resource('/pengeluaran', PengeluaranController::class);
-        Route::resource('/EditSalahCatat', EditSalahCatatController::class);
-        Route::resource('/keluhan', KeluhanController::class);
-        Route::resource('/DashboardAdmin', DashboardAdminController::class);
-        Route::get('/api/laporan-data', [DashboardAdminController::class, 'getLaporanData'])->name('api.laporan-data');
-// Add this to your routes/api.php file:
+        Route::post('pemakaian/bayar', [PemakaianController::class, 'bayar'])->name('pemakaian.bayar');
+    });
+    Route::resource('/pengeluaran', PengeluaranController::class);
+    Route::resource('/laporan', LaporanController::class);
+    Route::resource('/pengeluaran', PengeluaranController::class);
+    Route::resource('/EditSalahCatat', EditSalahCatatController::class);
+    Route::resource('/keluhan', KeluhanController::class);
+    Route::resource('/DashboardAdmin', DashboardAdminController::class);
+    Route::get('/api/laporan-data', [DashboardAdminController::class, 'getLaporanData'])->name('api.laporan-data');
+    // Add this to your routes/api.php file:
 
-Route::get('/laporan-data', [App\Http\Controllers\DashboardAdminController::class, 'getLaporanData']);
+    Route::get('/laporan-data', [App\Http\Controllers\DashboardAdminController::class, 'getLaporanData']);
 
 });
