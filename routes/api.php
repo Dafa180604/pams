@@ -13,16 +13,24 @@ Route::middleware('auth:sanctum')->group(function () {
 
     //Route Api Keluahan 
     Route::get('/keluhan', [KeluhanController::class, 'index']);
+    Route::post('/keluhan', [KeluhanController::class, 'store']);
+
     //Route Api Transaksi 
     Route::get('/transaksi/{id}', [TransaksiController::class, 'show']);  
     Route::get('/transaksi', [TransaksiController::class, 'index']); 
+
     //Route Api Pemakaian
     Route::get('/pemakaian', [PemakaianController::class, 'index']);
     Route::post('/pemakaian/store', [PemakaianController::class, 'store']);  
     Route::post('/pemakaian/bayar/langsung', [PemakaianController::class, 'bayar']); 
     Route::put('/pemakaian/bayar/lunas', [PemakaianController::class, 'update']);
-    //Route Api Data Dashboard
+
+    //Route Api Data Dashboard Petugas
     Route::get('/dashboard/petugas', [DashboardController::class, 'dataDashboardPetugas']);
+
+    //Route Api Data Dashboard Pelanggan
+    Route::get('/dashboard/pelanggan', [DashboardController::class, 'dataDashboardPelanggan']);
+    
     //Route Api ubah password
     Route::post('/ubah-password', [AuthController::class, 'ubahPassword']);
 

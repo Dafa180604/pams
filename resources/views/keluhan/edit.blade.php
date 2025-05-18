@@ -74,18 +74,22 @@
                                         <h5 class="card-title text-primary mb-0">Foto Bukti Keluhan</h5>
                                     </div>
                                     <div class="card-body text-center">
-                                        @if(!empty($data->foto_keluhan))
+                                       @if(!empty($data->foto_keluhan))
                                             @if(Str::startsWith($data->foto_keluhan, 'https://'))
-                                                <img src="{{ $data->foto_keluhan }}" alt="Foto Keluhan" class="img-fluid rounded"
-                                                    style="max-height: 250px;">
+                                                <img src="{{ $data->foto_keluhan }}" alt="Foto Keluhan"
+                                                    class="img-fluid rounded"
+                                                    style="max-height: 250px; cursor: pointer;"
+                                                    onclick="openImage('{{ $data->foto_keluhan }}')">
                                             @else
                                                 <img src="{{ asset('storage/' . $data->foto_keluhan) }}" alt="Foto Keluhan"
-                                                    class="img-fluid rounded" style="max-height: 250px;">
+                                                    class="img-fluid rounded"
+                                                    style="max-height: 250px; cursor: pointer;"
+                                                    onclick="openImage('{{ asset('storage/' . $data->foto_keluhan) }}')">
                                             @endif
                                         @else
                                             <div class="alert alert-info">Tidak ada foto yang diunggah</div>
                                         @endif
-                                    </div>
+                                                                            </div>
                                 </div>
                             </div>
                         </div>
@@ -148,4 +152,52 @@
             </div>
         </div>
     </div>
+        <div id="imagePopup" class="popup-overlay" style="display: none;">
+        <span class="close-btn" onclick="closeImage()">×</span>
+        <img id="largeImage" src="" alt="Large Image">
+    </div>
+
+    <style>
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        #largeImage {
+            max-width: 90%;
+            max-height: 90%;
+            border: 2px solid white;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 30px;
+            color: white;
+            cursor: pointer;
+        }
+    </style>
+
+    <!-- JavaScript untuk membuka dan menutup gambar -->
+    <script>
+        function openImage(src) {
+            // Menampilkan gambar besar
+            document.getElementById('largeImage').src = src;
+            document.getElementById('imagePopup').style.display = 'flex';
+        }
+
+        function closeImage() {
+            // Menutup popup gambar
+            document.getElementById('imagePopup').style.display = 'none';
+        }
+    </script>
 @endsection

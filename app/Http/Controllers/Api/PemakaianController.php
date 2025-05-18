@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Transaksi;
 use Google\Cloud\Storage\StorageClient;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use App\Models\Laporan;
 
 class PemakaianController extends Controller
@@ -104,191 +105,194 @@ class PemakaianController extends Controller
     // Method untuk menyimpan data pemakaian
     public function store(Request $request)
     {
-        // Validasi data input
         $validated = $request->validate([
-            'id_users' => 'required|exists:users,id_users', 
+            'id_users' => 'required|exists:users,id_users',
             'meter_awal' => 'required|numeric',
             'meter_akhir' => 'required|numeric|gte:meter_awal',
-            'foto_meteran' => 'nullable|image|mimes:jpg,jpeg,png|max:5048'
-            // 'foto_meteran' => 'nullable|image', // Foto meteran opsional
+            'foto_meteran' => 'nullable|image|mimes:jpg,jpeg,png|max:2048'
         ], [
             'meter_awal.required' => 'Meter Awal Wajib Diisi!',
             'meter_awal.numeric' => 'Meter Awal Wajib di Isi Angka!',
             'meter_akhir.required' => 'Meter Akhir Wajib Diisi!',
             'meter_akhir.numeric' => 'Meter Akhir Wajib di Isi Angka!',
             'meter_akhir.gte' => 'Meter Akhir Tidak Boleh Lebih Kecil dari Meter Awal!',
+            'foto_meteran.image' => 'File yang diunggah harus berupa gambar!',
+            'foto_meteran.mimes' => 'Gambar harus berformat jpg, jpeg, atau png!',
+            'foto_meteran.max' => 'Ukuran gambar maksimal 2MB!',
         ]);
-
-        // Membuat data pemakaian baru
-        $pemakaian = new Pemakaian();
-        $pemakaian->id_users = $request->id_users;  // Gantilah 'user_id' sesuai parameter
-        $pemakaian->meter_awal = $request->meter_awal;
-        $pemakaian->meter_akhir = $request->meter_akhir;
-        $pemakaian->jumlah_pemakaian = $pemakaian->meter_akhir - $pemakaian->meter_awal;
-        $pemakaian->waktu_catat = now();
-        $pemakaian->petugas = Auth::user()->id_users;
-        $pemakaian->foto_meteran = null;
-
-        // Simpan pemakaian
-        $pemakaian->save();
-
-        //Upload foto ke Firebase jika ada
-        if ($request->hasFile('foto_meteran')) {
-            $file = $request->file('foto_meteran');
-            $fileName = 'foto_meteran/' . $pemakaian->id_pemakaian . '/' . time() . '_' . $file->getClientOriginalName();
-
-            // Inisialisasi Google Cloud Storage
-            $storage = new StorageClient([
-                'keyFilePath' => base_path('app/firebase/dafaq-542a5-firebase-adminsdk-nezyi-2e2d42888b.json'),
-            ]);
-
-            $bucketName = env('FIREBASE_STORAGE_BUCKET', 'dafaq-542a5.appspot.com');
-            $bucket = $storage->bucket($bucketName);
-
-            // Upload file ke Firebase Storage
-            try {
+    
+        DB::beginTransaction();
+    
+        try {
+            // Buat data pemakaian baru
+            $pemakaian = new Pemakaian();
+            $pemakaian->id_users = $request->id_users;
+            $pemakaian->meter_awal = $request->meter_awal;
+            $pemakaian->meter_akhir = $request->meter_akhir;
+            $pemakaian->jumlah_pemakaian = $pemakaian->meter_akhir - $pemakaian->meter_awal;
+            $pemakaian->waktu_catat = now();
+            $pemakaian->petugas = Auth::user()->id_users;
+            $pemakaian->save();
+    
+            // Upload foto jika ada
+            if ($request->hasFile('foto_meteran')) {
+                $file = $request->file('foto_meteran');
+                $fileName = 'foto_meteran/' . $pemakaian->id_pemakaian . '/' . time() . '_' . $file->getClientOriginalName();
+    
+                $storage = new StorageClient([
+                    'keyFilePath' => base_path('app/firebase/dafaq-542a5-firebase-adminsdk-nezyi-2e2d42888b.json'),
+                ]);
+    
+                $bucketName = env('FIREBASE_STORAGE_BUCKET', 'dafaq-542a5.appspot.com');
+                $bucket = $storage->bucket($bucketName);
+    
                 $bucket->upload(
                     fopen($file->getRealPath(), 'r'),
-                    [
-                        'name' => $fileName,
-                    ]
+                    ['name' => $fileName]
                 );
-                \Log::info('Firebase Upload Success');
-            } catch (\Exception $e) {
-                \Log::error('Firebase Upload Failed: ' . $e->getMessage());
-                throw $e;  // optionally throw lagi biar tetap error
+    
+                $object = $bucket->object($fileName);
+                $object->update(['acl' => []], ['predefinedAcl' => 'publicRead']);
+    
+                $fotoUrl = 'https://storage.googleapis.com/' . $bucketName . '/' . $fileName;
+                $pemakaian->foto_meteran = $fotoUrl;
+                $pemakaian->save();
             }
-
-
-            // Buat file publik
-            $object = $bucket->object($fileName);
-            $object->update(['acl' => []], ['predefinedAcl' => 'publicRead']);
-
-            // Dapatkan URL publik dan simpan di model Pemakaian
-            $fotoUrl = 'https://storage.googleapis.com/' . $bucketName . '/' . $fileName;
-            $pemakaian->foto_meteran = $fotoUrl;
-            $pemakaian->save();
+    
+            // Hitung tagihan
+            $billDetails = $this->calculateBill($pemakaian->jumlah_pemakaian);
+    
+            // Simpan transaksi
+            $transaksi = new Transaksi();
+            $transaksi->id_pemakaian = $pemakaian->id_pemakaian;
+            $transaksi->id_beban_biaya = $billDetails['beban_id'];
+            $transaksi->id_kategori_biaya = $billDetails['kategori_id'];
+            $transaksi->tgl_pembayaran = null;
+            $transaksi->jumlah_rp = $billDetails['total'];
+            $transaksi->status_pembayaran = $request->status_pembayaran ?? 'Belum Bayar';
+            $transaksi->detail_biaya = json_encode($billDetails['detail']);
+            $transaksi->save();
+    
+            DB::commit();
+    
+            return response()->json([
+                'message' => 'Data Pemakaian berhasil ditambahkan.',
+                'data' => $pemakaian
+            ], 201);
+    
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Error saat menyimpan data pemakaian: ' . $e->getMessage());
+    
+            return response()->json([
+                'message' => 'Gagal menyimpan data pemakaian: ' . $e->getMessage()
+            ], 500);
         }
-
-        // Hitung tagihan berdasarkan pemakaian
-        $billDetails = $this->calculateBill($pemakaian->jumlah_pemakaian);
-
-        // Membuat data transaksi baru
-        $transaksi = new Transaksi();
-        $transaksi->id_pemakaian = $pemakaian->id_pemakaian;
-        $transaksi->id_beban_biaya = $billDetails['beban_id'];
-        $transaksi->id_kategori_biaya = $billDetails['kategori_id'];
-        $transaksi->tgl_pembayaran = null;
-        $transaksi->jumlah_rp = $billDetails['total'];
-        $transaksi->status_pembayaran = $request->status_pembayaran ?? 'Belum Bayar';
-        $transaksi->detail_biaya = json_encode($billDetails['detail']);
-        $transaksi->save();
-
-        return response()->json([
-            'message' => 'Data Pemakaian berhasil ditambahkan.',
-            'data' => $pemakaian
-        ], 201); // Response berhasil ditambahkan dengan status 201
     }
 
     // Method untuk form 
     public function bayar(Request $request)
     {
-        // Validasi data input
-        $request->validate([
-            'id_users' => 'required|exists:users,id_users',
-            'meter_awal' => 'required|numeric',
-            'meter_akhir' => 'required|numeric|gte:meter_awal',
-            'foto_meteran' => 'nullable|image|mimes:jpg,jpeg,png|max:5048'
-            // 'foto_meteran' => 'nullable|image', // Foto meteran opsional
-        ], [
-            'meter_awal.required' => 'Meter Awal Wajib Diisi!',
-            'meter_awal.numeric' => 'Meter Awal Wajib di Isi Angka!',
-            'meter_akhir.required' => 'Meter Akhir Wajib Diisi!',
-            'meter_akhir.numeric' => 'Meter Akhir Wajib di Isi Angka!',
-            'meter_akhir.gte' => 'Meter Akhir Tidak Boleh Lebih Kecil dari Meter Awal!',
-        ]);
-    
-        // Membuat data pemakaian baru
-        $pemakaian = new Pemakaian();
-        $pemakaian->id_users = $request->id_users;
-        $pemakaian->meter_awal = $request->meter_awal;
-        $pemakaian->meter_akhir = $request->meter_akhir;
-        $pemakaian->jumlah_pemakaian = $pemakaian->meter_akhir - $pemakaian->meter_awal;
-        $pemakaian->waktu_catat = now();
-        $pemakaian->petugas = Auth::user()->id_users;
-        
-        // Simpan pemakaian terlebih dahulu untuk mendapatkan ID
-        $pemakaian->save();
-        
-        //Upload foto ke Firebase jika ada
-        if ($request->hasFile('foto_meteran')) {
-            $file = $request->file('foto_meteran');
-            $fileName = 'foto_meteran/' . $pemakaian->id_pemakaian . '/' . time() . '_' . $file->getClientOriginalName();
-
-            // Inisialisasi Google Cloud Storage
-            $storage = new StorageClient([
-                'keyFilePath' => base_path('app/firebase/dafaq-542a5-firebase-adminsdk-nezyi-2e2d42888b.json'),
+        try {
+            // Validasi data input
+            $request->validate([
+                'id_users' => 'required|exists:users,id_users',
+                'meter_awal' => 'required|numeric',
+                'meter_akhir' => 'required|numeric|gte:meter_awal',
+                'foto_meteran' => 'nullable|image|mimes:jpg,jpeg,png|max:2048'
+            ], [
+                'meter_awal.required' => 'Meter Awal Wajib Diisi!',
+                'meter_awal.numeric' => 'Meter Awal Wajib di Isi Angka!',
+                'meter_akhir.required' => 'Meter Akhir Wajib Diisi!',
+                'meter_akhir.numeric' => 'Meter Akhir Wajib di Isi Angka!',
+                'meter_akhir.gte' => 'Meter Akhir Tidak Boleh Lebih Kecil dari Meter Awal!',
+                'foto_meteran.image' => 'File yang diunggah harus berupa gambar!',
+                'foto_meteran.mimes' => 'Gambar harus berformat jpg, jpeg, atau png!',
+                'foto_meteran.max' => 'Ukuran gambar maksimal 2MB!',
             ]);
-
-            $bucketName = env('FIREBASE_STORAGE_BUCKET', 'dafaq-542a5.appspot.com');
-            $bucket = $storage->bucket($bucketName);
-
-            // Upload file ke Firebase Storage
-            try {
-                $bucket->upload(
-                    fopen($file->getRealPath(), 'r'),
-                    [
-                        'name' => $fileName,
-                    ]
-                );
-                \Log::info('Firebase Upload Success');
-            } catch (\Exception $e) {
-                \Log::error('Firebase Upload Failed: ' . $e->getMessage());
-                throw $e;  // optionally throw lagi biar tetap error
-            }
-
-
-            // Buat file publik
-            $object = $bucket->object($fileName);
-            $object->update(['acl' => []], ['predefinedAcl' => 'publicRead']);
-
-            // Dapatkan URL publik dan simpan di model Pemakaian
-            $fotoUrl = 'https://storage.googleapis.com/' . $bucketName . '/' . $fileName;
-            $pemakaian->foto_meteran = $fotoUrl;
+    
+            // Buat data pemakaian baru
+            $pemakaian = new Pemakaian();
+            $pemakaian->id_users = $request->id_users;
+            $pemakaian->meter_awal = $request->meter_awal;
+            $pemakaian->meter_akhir = $request->meter_akhir;
+            $pemakaian->jumlah_pemakaian = $pemakaian->meter_akhir - $pemakaian->meter_awal;
+            $pemakaian->waktu_catat = now();
+            $pemakaian->petugas = Auth::user()->id_users;
+    
+            // Simpan pemakaian untuk dapat ID
             $pemakaian->save();
+    
+            // Upload foto ke Firebase jika ada
+            if ($request->hasFile('foto_meteran')) {
+                try {
+                    $file = $request->file('foto_meteran');
+                    $fileName = 'foto_meteran/' . $pemakaian->id_pemakaian . '/' . time() . '_' . $file->getClientOriginalName();
+    
+                    $storage = new StorageClient([
+                        'keyFilePath' => base_path('app/firebase/dafaq-542a5-firebase-adminsdk-nezyi-2e2d42888b.json'),
+                    ]);
+                    $bucketName = env('FIREBASE_STORAGE_BUCKET', 'dafaq-542a5.appspot.com');
+                    $bucket = $storage->bucket($bucketName);
+    
+                    $bucket->upload(
+                        fopen($file->getRealPath(), 'r'),
+                        ['name' => $fileName]
+                    );
+    
+                    \Log::info('Firebase Upload Success');
+    
+                    $object = $bucket->object($fileName);
+                    $object->update(['acl' => []], ['predefinedAcl' => 'publicRead']);
+    
+                    $fotoUrl = 'https://storage.googleapis.com/' . $bucketName . '/' . $fileName;
+                    $pemakaian->foto_meteran = $fotoUrl;
+                    $pemakaian->save();
+                } catch (\Exception $e) {
+                    \Log::error('Firebase Upload Failed: ' . $e->getMessage());
+                    // Tidak batalkan proses, hanya catat error
+                }
+            }
+    
+            // Hitung tagihan
+            $billDetails = $this->calculateBill($pemakaian->jumlah_pemakaian);
+    
+            // Buat transaksi
+            $transaksi = new Transaksi();
+            $transaksi->id_pemakaian = $pemakaian->id_pemakaian;
+            $transaksi->id_beban_biaya = $billDetails['beban_id'];
+            $transaksi->id_kategori_biaya = $billDetails['kategori_id'];
+            $transaksi->jumlah_rp = $billDetails['total'];
+            $transaksi->status_pembayaran = $request->status_pembayaran ?? 'Belum Bayar';
+            $transaksi->detail_biaya = json_encode($billDetails['detail']);
+            $transaksi->save();
+    
+            // Ambil data untuk response API
+            $data = Transaksi::with(['pemakaian.users'])->find($transaksi->id_transaksi);
+    
+            return response()->json([
+                'success' => true,
+                'message' => 'Data pemakaian dan transaksi berhasil dibuat',
+                'data' => [
+                    'id_pelanggan' => $data->pemakaian->users->id_users,
+                    'id_transaksi' => $transaksi->id_transaksi,
+                    'meter_awal' => $data->pemakaian->meter_awal,
+                    'meter_akhir' => $data->pemakaian->meter_akhir,
+                    'jumlah_pemakaian' => $data->pemakaian->jumlah_pemakaian,
+                    'detail_biaya' => json_decode($data->detail_biaya),
+                    'total_tagihan' => $data->jumlah_rp,
+                    'foto_meteran' => $data->pemakaian->foto_meteran ?? null,
+                ]
+            ], 201);
+        } catch (\Exception $e) {
+            \Log::error('Bayar Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat memproses data: ' . $e->getMessage(),
+            ], 500);
         }
-    
-        // Hitung tagihan berdasarkan pemakaian dari data pencatatan
-        $billDetails = $this->calculateBill($pemakaian->jumlah_pemakaian);
-    
-        // Membuat data transaksi baru
-        $transaksi = new Transaksi();
-        $transaksi->id_pemakaian = $pemakaian->id_pemakaian;
-        $transaksi->id_beban_biaya = $billDetails['beban_id'];
-        $transaksi->id_kategori_biaya = $billDetails['kategori_id'];
-        $transaksi->jumlah_rp = $billDetails['total'];
-        $transaksi->status_pembayaran = $request->status_pembayaran ?? 'Belum Bayar';
-        $transaksi->detail_biaya = json_encode($billDetails['detail']);
-        $transaksi->save();
-    
-        // Ambil data untuk response API
-        $data = Transaksi::with(['pemakaian.users'])->find($transaksi->id_transaksi);
-    
-        // Return response dengan format yang diinginkan
-        return response()->json([
-            'success' => true,
-            'message' => 'Data pemakaian dan transaksi berhasil dibuat',
-            'data' => [
-                'id_pelanggan' => $data->pemakaian->users->id_users,
-                'id_transaksi' => $transaksi->id_transaksi,
-                'meter_awal' => $data->pemakaian->meter_awal,
-                'meter_akhir' => $data->pemakaian->meter_akhir,
-                'jumlah_pemakaian' => $data->pemakaian->jumlah_pemakaian,
-                'detail_biaya' => json_decode($data->detail_biaya),
-                'total_tagihan' => $data->jumlah_rp,
-            ]
-        ],201);
     }
+
     
     // Methid untuk store pembayaran
     public function update(Request $request)

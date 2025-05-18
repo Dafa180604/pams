@@ -21,7 +21,10 @@ class DashboardController extends Controller
     
         // Ambil akses pelanggan dari user
         $aksesPelanggan = json_decode(Auth::user()->akses_pelanggan, true);
-    
+        if (!is_array($aksesPelanggan)) {
+            $aksesPelanggan = [];
+        }
+
         // Total yang harus dicatat = semua pelanggan dalam akses_pelanggan
         $totalHarusDicatat = count($aksesPelanggan);
     
@@ -68,7 +71,6 @@ class DashboardController extends Controller
         ]);
     }
 
-
     private function getTransaksiTerbaruData($petugasId)
     {
         $transaksi = Transaksi::with(['pemakaian.users'])
@@ -103,8 +105,62 @@ class DashboardController extends Controller
         ];
     }
 
-    
+    public function dataDashboardPelanggan()
+    {
+        $pelangganId = Auth::user()->id_users;
+        $namaPelanggan = Auth::user()->nama;
 
+        // Ambil pemakaian terbaru oleh pelanggan ini
+        $pemakaianTerbaru = Pemakaian::where('id_users', $pelangganId)
+            ->latest('waktu_catat')
+            ->first();
 
+        $transaksiTerbaru = null;
+
+        if ($pemakaianTerbaru) {
+            $transaksi = Transaksi::where('id_pemakaian', $pemakaianTerbaru->id_pemakaian)
+                ->latest('created_at')
+                ->with(['pemakaian.users']) 
+                ->first();
+
+            if ($transaksi) {
+                $transaksiTerbaru = [
+                    'id_transaksi'       => $transaksi->id_transaksi,
+                    'id_pemakaian'       => $transaksi->pemakaian->id_pemakaian ?? null,
+                    'id_pelanggan'       => $transaksi->pemakaian->users->id_users ?? null,
+                    'nama_pelanggan'     => $transaksi->pemakaian->users->nama ?? '-',
+                    'alamat_pelanggan'   => $transaksi->pemakaian && $transaksi->pemakaian->users
+                        ? trim("{$transaksi->pemakaian->users->alamat}, RT {$transaksi->pemakaian->users->rt} RW {$transaksi->pemakaian->users->rw}")
+                        : '-',
+                    'tanggal_pencatatan' => $transaksi->pemakaian->waktu_catat ?? null,
+                    'tanggal_pembayaran' => $transaksi->tgl_pembayaran,
+                    'meter_awal'         => $transaksi->pemakaian->meter_awal ?? null,
+                    'meter_akhir'        => $transaksi->pemakaian->meter_akhir ?? null,
+                    'jumlah_pemakaian'   => $transaksi->pemakaian->jumlah_pemakaian ?? null,
+                    'denda'              => $transaksi->rp_denda,
+                    'total_tagihan'      => $transaksi->jumlah_rp,
+                    'foto_meteran'       => $transaksi->pemakaian->foto_meteran ?? null,
+                    'status_pembayaran'  => $transaksi->tgl_pembayaran ? 'Lunas' : null,
+                    'detail_biaya'       => json_decode($transaksi->detail_biaya),
+                ];
+            }
+        }
+
+        // Ambil keluhan terakhir oleh pelanggan ini
+        $keluhanTerbaru = Keluhan::where('id_users', $pelangganId)
+            ->latest('created_at')
+            ->first();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Data dashboard pelanggan berhasil diambil',
+            'data' => [
+                'id_pelanggan' => $pelangganId,
+                'nama_pelanggan' => $namaPelanggan,
+                'transaksi_terbaru' => $transaksiTerbaru,
+                'keluhan_terbaru' => $keluhanTerbaru,
+            ]
+        ]);
+    }
 
 }

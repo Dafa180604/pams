@@ -15,14 +15,20 @@ class TransaksiController extends Controller
 
     public function index(Request $request)
     { 
-        $petugasId = Auth::user()->id_users;
+        $user = Auth::user();
         $search = $request->input('search');  // Ambil input search secara umum
         $currentMonth = now()->month;
         $currentYear = now()->year;
 
         $transaksi = Transaksi::with(['pemakaian.users'])
-            ->whereHas('pemakaian', function ($query) use ($petugasId) {
-                $query->where('petugas', $petugasId);
+            ->whereHas('pemakaian', function ($query) use ($user) {
+                if ($user->role === 'petugas') {
+                    $query->where('petugas', $user->id_users);
+                } elseif ($user->role === 'pelanggan') {
+                    $query->where('id_users', $user->id_users);
+                }else {
+                    abort(403, 'Role tidak dikenali');
+                }
             })
             ->when($search, function ($query, $search) {
                 return $query->where(function ($q) use ($search) {
