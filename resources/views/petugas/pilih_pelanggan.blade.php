@@ -77,6 +77,7 @@
                                     <th>Alamat</th>
                                     <th>RW</th>
                                     <th>RT</th>
+                                    <th>Petugas yang Memiliki Akses</th>
                                     <th>Aksi</th>
                                 </tr>
                             </thead>
@@ -89,6 +90,13 @@
                                         <td>{{ $p->alamat }}</td>
                                         <td>{{ $p->rw }}</td>
                                         <td>{{ $p->rt }}</td>
+                                        <td>
+                                            @if(isset($petugasAkses[$p->id_users]) && count($petugasAkses[$p->id_users]) > 0)
+                                                {{ implode(', ', array_column($petugasAkses[$p->id_users], 'nama')) }}
+                                            @else
+                                                <span class="text-muted">-</span>
+                                            @endif
+                                        </td>
                                         <td>
                                             <input type="checkbox" class="pelanggan-checkbox" 
                                                 data-id="{{ $p->id_users }}"

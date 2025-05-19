@@ -21,10 +21,10 @@ class PetugasController extends Controller
     {
         // Cari data petugas termasuk yang sudah soft delete
         $data = Users::withTrashed()->findOrFail($id);
-        
+
         // Query pemakaian berdasarkan ID petugas
         $pemakaianQuery = Pemakaian::where('petugas', $data->id_users);
-        
+
         // Filter berdasarkan bulan jika ada
         if ($request->has('end_date')) {
             $selectedMonth = $request->input('end_date');
@@ -37,27 +37,27 @@ class PetugasController extends Controller
             $endDate = Carbon::now()->endOfMonth();
             $pemakaianQuery->whereBetween('waktu_catat', [$startDate, $endDate]);
         }
-        
+
         // Calculate total transactions amount for the filtered period
         // Assuming there's a relationship between Pemakaian and Transaksi or a price field
         // Adjust this calculation based on your actual database structure
         $totalTransaksi = 0;
-        
+
         // Option 1: If you have a direct price/amount field in Pemakaian table
         // $totalTransaksi = $pemakaianQuery->sum('amount');
-        
+
         // Option 2: If transactions are in a separate related table (more common scenario)
         // Get pemakaian IDs for the filtered period
         $pemakaianIds = $pemakaianQuery->pluck('id_pemakaian')->toArray();
-        
+
         // Calculate total from Transaksi table based on these pemakaian IDs
         if (!empty($pemakaianIds)) {
             $totalTransaksi = Transaksi::whereIn('id_pemakaian', $pemakaianIds)->sum('jumlah_rp');
         }
-        
+
         // Format total transaction amount
         $formattedTotal = 'Rp ' . number_format($totalTransaksi, 0, ',', '.');
-        
+
         // Ambil data pemakaian dan user (termasuk soft deleted)
         $pencatatan = $pemakaianQuery->with([
             'users' => function ($query) {
@@ -66,7 +66,7 @@ class PetugasController extends Controller
         ])
             ->orderBy('waktu_catat', 'desc')
             ->paginate(10);
-            
+
         return view('petugas.detail', [
             'data' => $data,
             'pencatatan' => $pencatatan,
@@ -360,6 +360,38 @@ class PetugasController extends Controller
             }
         }
 
+        // Ambil semua petugas untuk mencari akses ke pelanggan
+        $semuaPetugas = Users::where('role', 'petugas')->get();
+
+        // Buat mapping petugas yang memiliki akses ke setiap pelanggan
+        // Logic: Cek kolom akses_pelanggan dari setiap petugas, 
+        //        jika berisi ID pelanggan tertentu, maka petugas tersebut punya akses ke pelanggan itu
+        $petugasAkses = [];
+
+        // Inisialisasi array kosong untuk setiap pelanggan
+        foreach ($dataPelanggan as $pelanggan) {
+            $petugasAkses[$pelanggan->id_users] = [];
+        }
+
+        // Periksa setiap petugas dan akses mereka
+        foreach ($semuaPetugas as $ptgs) {
+            if (!empty($ptgs->akses_pelanggan)) {
+                $decoded = json_decode($ptgs->akses_pelanggan, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    // $decoded berisi array ID pelanggan yang bisa diakses oleh petugas ini
+                    foreach ($decoded as $idPelanggan) {
+                        // Cek apakah ID pelanggan ini ada dalam list pelanggan yang ditampilkan
+                        if (isset($petugasAkses[$idPelanggan])) {
+                            $petugasAkses[$idPelanggan][] = [
+                                'id' => $ptgs->id_users,
+                                'nama' => $ptgs->nama
+                            ];
+                        }
+                    }
+                }
+            }
+        }
+
         // Ambil data untuk dropdown filter hanya dari pelanggan
         $alamatList = Users::where('role', 'pelanggan')->select('alamat')->distinct()->pluck('alamat');
         $rwList = Users::where('role', 'pelanggan')->select('rw')->distinct()->pluck('rw');
@@ -368,6 +400,7 @@ class PetugasController extends Controller
         return view('petugas.pilih_pelanggan', [
             'dataPelanggan' => $dataPelanggan,
             'aksesPelanggan' => $aksesPelanggan,
+            'petugasAkses' => $petugasAkses,
             'petugas' => $petugas,
             'alamatList' => $alamatList,
             'rwList' => $rwList,
