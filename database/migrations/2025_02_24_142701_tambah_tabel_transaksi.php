@@ -14,13 +14,13 @@ return new class extends Migration
         Schema::create('transaksi',function(Blueprint $table){
             $table->id('id_transaksi');
             $table->unsignedBigInteger('id_pemakaian');
-            $table->unsignedBigInteger('id_beban_biaya')->nullable();
+            $table->unsignedBigInteger('id_beban_biaya');
             $table->unsignedBigInteger('id_kategori_biaya')->nullable();
-            $table->text('detail_biaya')->nullable();
+            $table->text('detail_biaya');
             $table->unsignedBigInteger('id_biaya_denda')->nullable();
             $table->integer('rp_denda')->nullable();
             $table->integer('jumlah_rp');
-            $table->string('status_pembayaran');
+            $table->enum('status_pembayaran', ['Lunas', 'Belum Bayar']);
             $table->dateTime('tgl_pembayaran')->nullable();
             $table->integer('uang_bayar')->nullable();
             $table->integer('kembalian')->nullable();

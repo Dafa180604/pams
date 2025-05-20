@@ -14,19 +14,19 @@ return new class extends Migration {
             $table->id('id_laporan');
             $table->string('keterangan');
             $table->dateTime('tanggal')->nullable();
-            $table->unsignedBigInteger('id_transaksi')->nullable();
-            $table->unsignedBigInteger('id_biaya_golongan')->nullable();
+            // $table->unsignedBigInteger('id_transaksi')->nullable();
+            // $table->unsignedBigInteger('id_biaya_golongan')->nullable();
             $table->integer('uang_masuk')->nullable();
             $table->integer('uang_keluar')->nullable();
             $table->timestamps();
-            $table->foreign('id_transaksi')
-                ->references('id_transaksi')
-                ->on('transaksi')
-                ->onDelete('cascade');
-            $table->foreign('id_biaya_golongan')
-                ->references('id_biaya_golongan')
-                ->on('biaya_golongan_berbayar')
-                ->onDelete('cascade');
+            // $table->foreign('id_transaksi')
+            //     ->references('id_transaksi')
+            //     ->on('transaksi')
+            //     ->onDelete('cascade');
+            // $table->foreign('id_biaya_golongan')
+            //     ->references('id_biaya_golongan')
+            //     ->on('biaya_golongan_berbayar')
+            //     ->onDelete('cascade');
         });
     }
 

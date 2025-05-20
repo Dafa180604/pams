@@ -27,8 +27,8 @@ class Transaksi extends Model
     {
         return $this->belongsTo(BiayaDenda::class, 'id_biaya_denda');
     }
-    public function Laporan()
-    {
-        return $this->hasMany(Laporan::class, 'id_laporan');
-    }
+    // public function Laporan()
+    // {
+    //     return $this->hasMany(Laporan::class, 'id_laporan');
+    // }
 }

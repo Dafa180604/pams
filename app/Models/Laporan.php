@@ -11,12 +11,12 @@ class Laporan extends Model
     protected $primaryKey = 'id_laporan';
     protected $fillable = ['id_laporan', 'keterangan','status', 'uang_masuk', 'uang_keluar', 'sisa_saldo'];
 
-    public function Transaksi()
-    {
-        return $this->belongsTo(Transaksi::class, 'id_transaksi');
-    }
-    public function biayagolongan()
-    {
-        return $this->belongsTo(BiayaGolonganBerbayar::class, 'id_biaya_golongan');
-    }
+    // public function Transaksi()
+    // {
+    //     return $this->belongsTo(Transaksi::class, 'id_transaksi');
+    // }
+    // public function biayagolongan()
+    // {
+    //     return $this->belongsTo(BiayaGolonganBerbayar::class, 'id_biaya_golongan');
+    // }
 }

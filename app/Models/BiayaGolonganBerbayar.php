@@ -12,8 +12,8 @@ class BiayaGolonganBerbayar extends Model
     protected $primaryKey='id_biaya_golongan';
     protected $fillable=['id_biaya_golongan','tarif','keterangan'];
 
-    public function Laporan()
-    {
-        return $this->hasOne(Laporan::class, 'id_laporan');
-    }
+    // public function Laporan()
+    // {
+    //     return $this->hasOne(Laporan::class, 'id_laporan');
+    // }
 }

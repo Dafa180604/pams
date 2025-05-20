@@ -22,9 +22,9 @@ return new class extends Migration
             $table->string('password');
             $table->string('role');
             $table->string('foto_profile')->nullable();
-            $table->string('golongan')->nullable();
+            $table->enum('golongan', ['Bantuan', 'Berbayar'])->nullable();
             $table->integer('jumlah_air')->nullable();
-            $table->string('akses_pelanggan')->nullable();
+            $table->string('akses_pelanggan',500)->nullable();
             $table->timestamps();
             $table->softDeletes(); // Menambahkan kolom deleted_at untuk soft delete
         });

@@ -2,80 +2,89 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Faker\Factory as Faker;
-class petugasSeeder extends Seeder
+
+class PetugasSeeder extends Seeder
 {
     /**
      * Run the database seeds.
      */
     public function run()
     {
-        $faker = Faker::create();
+        $faker = Faker::create('id_ID');
+
+        function generateIndonesianPhoneNumber(): string {
+            return '08' . rand(111, 999) . rand(1000, 9999) . rand(100, 999);
+        }
+
         DB::table('users')->insert([
-            'id_users' => 11,
+            'id_users' => 1,
             'nama' => 'Dafa',
             'alamat' => 'watuduwur',
             'rw' => '1',
             'rt' => '2',
-            'username' => 'dafa@gmail.com',     
-            'no_hp' => substr($faker->unique()->phoneNumber, 0, 13),
-            'role' => 'petugas',
-            'password' => bcrypt('dafa@gmail.com'),
+            'username' => 'dafa001',
+            'no_hp' => '081233417452',
+            'role' => 'admin',
+            'password' => bcrypt('Dafa@1'),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+
         DB::table('users')->insert([
-            'id_users' => 14,
+            'id_users' => 2,
             'nama' => 'Mahfudi',
             'alamat' => 'watuduwur',
             'rw' => '2',
             'rt' => '2',
-            'username' => 'mahfudi@gmail.com',   
-            'no_hp' => substr($faker->unique()->phoneNumber, 0, 13),
+            'username' => 'mahfudi002',
+            'no_hp' => generateIndonesianPhoneNumber(),
             'role' => 'petugas',
-            'password' => bcrypt('mahfudi@gmail.com'),
+            'password' => bcrypt('Mahfudi@2'),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+
         DB::table('users')->insert([
-            'id_users' => 15,
+            'id_users' => 3,
             'nama' => 'Ngatemin',
             'alamat' => 'watuduwur',
             'rw' => '1',
             'rt' => '1',
-            'username' => 'ngatemin@gmail.com', 
-            'no_hp' => substr($faker->unique()->phoneNumber, 0, 13),
+            'username' => 'ngatemin003',
+            'no_hp' => generateIndonesianPhoneNumber(),
             'role' => 'petugas',
-            'password' => bcrypt('ngatemin@gmail.com'),
+            'password' => bcrypt('Ngatemin@3'),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+
         DB::table('users')->insert([
-            'id_users' => 16,
+            'id_users' => 4,
             'nama' => 'Udhik',
             'alamat' => 'pulorjo',
             'rw' => '1',
             'rt' => '3',
-            'username' => 'udhik@gmail.com',
-            'no_hp' => substr($faker->unique()->phoneNumber, 0, 13),
+            'username' => 'udhik004',
+            'no_hp' => generateIndonesianPhoneNumber(),
             'role' => 'petugas',
-            'password' => bcrypt('udhik@gmail.com'),
+            'password' => bcrypt('Udhik@4'),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+
         DB::table('users')->insert([
-            'id_users' => 17,
+            'id_users' => 5,
             'nama' => 'Imam',
             'alamat' => 'Babadan',
             'rw' => '1',
             'rt' => '2',
-            'username' => 'imam@gmail.com',
-            'no_hp' => substr($faker->unique()->phoneNumber, 0, 13),
+            'username' => 'imam005',
+            'no_hp' => generateIndonesianPhoneNumber(),
             'role' => 'petugas',
-            'password' => bcrypt('imam@gmail.com'),
+            'password' => bcrypt('Imam@5'),
             'created_at' => now(),
             'updated_at' => now(),
         ]);

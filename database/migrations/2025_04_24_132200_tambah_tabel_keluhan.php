@@ -12,12 +12,12 @@ return new class extends Migration {
     {
         Schema::create('keluhan', function (Blueprint $table) {
             $table->id('id_keluhan');
-            $table->unsignedBigInteger('id_users')->nullable();
-            $table->string('keterangan');
-            $table->string('status');
+            $table->unsignedBigInteger('id_users');
+            $table->string('keterangan', 500);
+            $table->enum('status', ['Diproses', 'Dibaca', 'Terkirim']);
             $table->string('foto_keluhan')->nullable();
             $table->dateTime('tanggal');
-            $table->string('tanggapan')->nullable();
+            $table->string('tanggapan',500)->nullable();
             $table->timestamps();
             $table->foreign('id_users')
                 ->references('id_users')
