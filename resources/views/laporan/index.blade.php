@@ -34,9 +34,9 @@
                                 </div>
                                 <div class="col-md-6 align-self-end">
                                     <div class="btn-group">
-                                        <button type="button" class="btn btn-success me-2" onclick="printTable()">
+                                        <!-- <button type="button" class="btn btn-success me-2" onclick="printTable()">
                                             <i data-feather="printer"></i> Print
-                                        </button>
+                                        </button> -->
                                         <button type="button" class="btn btn-primary" onclick="exportToWord()">
                                             <i data-feather="file-text"></i> Export ke Word
                                         </button>
@@ -62,7 +62,7 @@
                                     @if($previousSaldo != 0)
                                         <tr class="table-secondary">
                                             <td>-</td>
-                                            <td><strong>Saldo Awal</strong></td>
+                                            <td><strong>Saldo Bulan Lalu</strong></td>
                                             <!-- <td>{{ $startDate }}</td> -->
                                             <td>-</td>
                                             <td>-</td>

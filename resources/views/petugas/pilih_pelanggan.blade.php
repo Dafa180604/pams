@@ -72,7 +72,7 @@
                             <thead class="thead-dark">
                                 <tr>
                                     <th>No</th>
-                                    <th>ID Pelanggan</th>
+                                    <!-- <th>ID Pelanggan</th> -->
                                     <th>Nama</th>
                                     <th>Alamat</th>
                                     <th>RW</th>
@@ -85,7 +85,7 @@
                                 @forelse($dataPelanggan as $index => $p)
                                     <tr>
                                         <td>{{ $index + 1 }}</td>
-                                        <td>{{ $p->id_users }}</td>
+                                        <!-- <td>{{ $p->id_users }}</td> -->
                                         <td>{{ $p->nama }}</td>
                                         <td>{{ $p->alamat }}</td>
                                         <td>{{ $p->rw }}</td>

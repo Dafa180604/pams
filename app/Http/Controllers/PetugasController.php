@@ -117,7 +117,7 @@ class PetugasController extends Controller
         ]);
 
         // Buat Password
-        $defaultPassword = '123456';
+        $defaultPassword = 'PetugasPams';
         $passwordToStore = $request->password ? Hash::make($request->password) : Hash::make($defaultPassword);
 
         // Logika untuk menentukan id_users yang kosong

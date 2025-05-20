@@ -82,6 +82,7 @@
                                         <label class="form-label">Username</label>
                                         <input type="text" name="username" class="form-control"
                                             placeholder="Masukkan Username" value="{{ old('username') }}">
+                                            <small class="text-muted">Password Default: PelangganPams</small>
                                         @error('username')
                                             <div class="text-danger">{{ $message }}</div>
                                         @enderror

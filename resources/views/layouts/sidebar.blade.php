@@ -19,12 +19,12 @@
         </a>
       </li>
       <li class="nav-item nav-category">Kelola Data Master</li>
-      <li class="nav-item">
+      <!-- <li class="nav-item">
         <a href="{{route('pemakaian.index')}}" class="nav-link">
           <i class="link-icon" data-feather="droplet"></i>
           <span class="link-title">Pemakaian</span>
         </a>
-      </li>
+      </li> -->
       <li class="nav-item">
         <a href="{{route('petugas.index')}}" class="nav-link">
           <i class="link-icon" data-feather="user"></i>

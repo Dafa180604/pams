@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
             BiayaDendaSeeder::class,
             BebanBiayaSeeder::class,
             BiayaGolonganSeeder::class,
+            SaldoLaluSeeder::class,
         ]);
     }
 }

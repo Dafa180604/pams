@@ -95,7 +95,7 @@ class PelangganController extends Controller
 
         //Buat Password
         // Menyusun password yang akan disimpan
-        $defaultPassword = '123456';
+        $defaultPassword = 'PelangganPams';
         $passwordToStore = $request->password ? Hash::make($request->password) : Hash::make($defaultPassword);
 
         // Logika untuk menentukan id_users yang kosong

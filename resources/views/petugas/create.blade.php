@@ -82,43 +82,12 @@
                                         <label class="form-label">Username</label>
                                         <input type="text" name="username" class="form-control"
                                             placeholder="Masukkan Username" value="{{ old('username') }}">
+                                        <small class="text-muted">Password Default: PetugasPams</small>
                                         @error('username')
                                             <div class="text-danger">{{ $message }}</div>
                                         @enderror
                                     </div>
                                 </div>
-                                
-                                <!-- <div class="col-sm-6">
-                                    <div class="mb-3">
-                                        <label class="form-label">Golongan</label>
-                                        <select name="golongan" class="form-control">
-                                            <option value="">Pilih
-                                                Golongan</option>
-                                            <option value="Bantuan" {{ old('golongan') == 'Bantuan' ? 'selected' : '' }}>
-                                                Bantuan</option>
-                                            <option value="Berbayar" {{ old('golongan') == 'Berbayar' ? 'selected' : '' }}>
-                                                Berbayar</option>
-                                        </select>
-                                        @error('golongan')
-                                            <div class="text-danger">{{ $message }}</div>
-                                        @enderror
-                                    </div>
-                                </div> -->
-
-                            </div>
-
-                            <div class="row">
-                                <!-- <div class="col-sm-6">
-                                    <div class="mb-3">
-                                        <label class="form-label">Jumlah Air</label>
-                                        <input type="number" name="jumlah_air" class="form-control"
-                                            placeholder="Masukkan Jumlah Air" value="{{ old('jumlah_air') }}">
-                                        @error('jumlah_air')
-                                            <div class="text-danger">{{ $message }}</div>
-                                        @enderror
-                                    </div>
-                                </div> -->
-                                <!-- Upload Foto -->
                                 <div class="col-sm-6">
                                     <div class="mb-3">
                                         <div class="mt-2">
@@ -126,13 +95,59 @@
                                                 style="display: none; max-width: 200px;">
                                         </div>
                                         <label class="form-label">Unggah Foto </label>
-                                        <input type="file" name="foto_profile" class="form-control" accept="image/*" onchange="previewImage(this)">
+                                        <input type="file" name="foto_profile" class="form-control" accept="image/*"
+                                            onchange="previewImage(this)">
                                         @error('foto_profile')
                                             <div class="text-danger">{{ $message }}</div>
                                         @enderror
                                     </div>
                                 </div>
+
+                                <!-- <div class="col-sm-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Golongan</label>
+                                            <select name="golongan" class="form-control">
+                                                <option value="">Pilih
+                                                    Golongan</option>
+                                                <option value="Bantuan" {{ old('golongan') == 'Bantuan' ? 'selected' : '' }}>
+                                                    Bantuan</option>
+                                                <option value="Berbayar" {{ old('golongan') == 'Berbayar' ? 'selected' : '' }}>
+                                                    Berbayar</option>
+                                            </select>
+                                            @error('golongan')
+                                                <div class="text-danger">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                    </div> -->
+
                             </div>
+
+                            <!-- <div class="row"> -->
+                            <!-- <div class="col-sm-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Jumlah Air</label>
+                                            <input type="number" name="jumlah_air" class="form-control"
+                                                placeholder="Masukkan Jumlah Air" value="{{ old('jumlah_air') }}">
+                                            @error('jumlah_air')
+                                                <div class="text-danger">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                    </div> -->
+                            <!-- Upload Foto -->
+                            <!-- <div class="col-sm-6">
+                                        <div class="mb-3">
+                                            <div class="mt-2">
+                                                <img id="previewFoto" src="" alt="Preview Foto"
+                                                    style="display: none; max-width: 200px;">
+                                            </div>
+                                            <label class="form-label">Unggah Foto </label>
+                                            <input type="file" name="foto_profile" class="form-control" accept="image/*" onchange="previewImage(this)">
+                                            @error('foto_profile')
+                                                <div class="text-danger">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                    </div>
+                                </div> -->
 
                             <div class="mt-3">
                                 <a href="{{ route('petugas.index') }}" class="btn btn-secondary me-2">Batal</a>

@@ -39,7 +39,7 @@
                                         <th>
                                             <input type="checkbox" id="selectAll">
                                         </th>
-                                        <th>id_users</th>
+                                        <!-- <th>id_users</th> -->
                                         <th>NAMA</th>
                                         <th>ALAMAT</th>
                                         <th>TELEPON</th>
@@ -56,7 +56,7 @@
                                                     value="{{ $pelanggan->id_users }}">
                                             </td>
                                             <!-- <td>{{$loop->iteration}}</td> -->
-                                            <td>{{ $pelanggan->id_users }}</td>
+                                            <!-- <td>{{ $pelanggan->id_users }}</td> -->
                                             <td>{{ $pelanggan->nama }}</td>
                                             <td>
                                                 <div>{{ $pelanggan->alamat }}</div>
