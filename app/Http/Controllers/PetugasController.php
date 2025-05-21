@@ -413,11 +413,93 @@ class PetugasController extends Controller
     public function updateAksesPelanggan(Request $request, $id_users)
     {
         $petugas = Users::findOrFail($id_users);
+        $newPelangganIds = $request->pelanggan_ids ?? [];
 
-        // Update akses pelanggan
-        $petugas->akses_pelanggan = json_encode($request->pelanggan_ids ?? []);
+        // Find all staff members who have access to the selected customers
+        $conflictingAssignments = [];
+
+        // Get all petugas users (excluding current petugas)
+        $allPetugas = Users::where('role', 'petugas')->where('id_users', '!=', $id_users)->get();
+
+        // Check each selected customer for existing assignments to other staff
+        foreach ($newPelangganIds as $pelangganId) {
+            foreach ($allPetugas as $otherPetugas) {
+                $otherAccessList = [];
+
+                // Decode the other staff's access list
+                if (!empty($otherPetugas->akses_pelanggan)) {
+                    $decoded = json_decode($otherPetugas->akses_pelanggan, true);
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                        $otherAccessList = $decoded;
+                    }
+                }
+
+                // Check if this pelanggan is in the other staff's access list
+                if (in_array($pelangganId, $otherAccessList)) {
+                    // Get the customer name
+                    $pelanggan = Users::find($pelangganId);
+                    $pelangganName = $pelanggan ? $pelanggan->nama : "ID: " . $pelangganId;
+
+                    // Store the conflict
+                    $conflictingAssignments[] = [
+                        'pelanggan_id' => $pelangganId,
+                        'pelanggan_name' => $pelangganName,
+                        'petugas_id' => $otherPetugas->id_users,
+                        'petugas_name' => $otherPetugas->nama
+                    ];
+                }
+            }
+        }
+
+        // If there are conflicts and we're not confirming changes yet
+        if (!empty($conflictingAssignments) && !$request->has('confirm_reassign')) {
+            // Return to the form with conflicts for confirmation
+            return redirect()->back()
+                ->with('conflicts', $conflictingAssignments)
+                ->with('new_assignments', $newPelangganIds)
+                ->with('warning', 'Terdapat pelanggan yang sudah ditugaskan ke petugas lain. Pastikan Anda ingin mengubah penugasan.');
+        }
+
+        // If we're confirming changes or no conflicts exist, proceed with updates
+
+        // If confirming changes, remove customer access from other staff members
+        if ($request->has('confirm_reassign')) {
+            foreach ($allPetugas as $otherPetugas) {
+                $otherAccessList = [];
+                $updated = false;
+
+                // Decode the other staff's access list
+                if (!empty($otherPetugas->akses_pelanggan)) {
+                    $decoded = json_decode($otherPetugas->akses_pelanggan, true);
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                        $otherAccessList = $decoded;
+
+                        // Remove any pelanggan that's being reassigned
+                        foreach ($newPelangganIds as $pelangganId) {
+                            $key = array_search($pelangganId, $otherAccessList);
+                            if ($key !== false) {
+                                unset($otherAccessList[$key]);
+                                $updated = true;
+                            }
+                        }
+
+                        // Re-index the array to avoid having arrays with gaps
+                        $otherAccessList = array_values($otherAccessList);
+
+                        // Update if changes were made
+                        if ($updated) {
+                            $otherPetugas->akses_pelanggan = json_encode($otherAccessList);
+                            $otherPetugas->save();
+                        }
+                    }
+                }
+            }
+        }
+
+        // Update the current petugas access list
+        $petugas->akses_pelanggan = empty($newPelangganIds) ? null : json_encode($newPelangganIds);
         $petugas->save();
 
-        return redirect('/petugas')->with('berhasil', 'Pilih Penugasan berhasil diperbarui.');
+        return redirect()->route('petugas.index')->with('berhasil', 'Pilih Penugasan berhasil diperbarui.');
     }
 }

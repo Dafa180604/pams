@@ -1,20 +1,56 @@
 @extends('layouts.master')
-@section('title', 'Pelanggan')
+@section('title', 'Pilih Pelanggan')
 @section('content')
 <div class="page-content">
     <nav class="page-breadcrumb">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item active" aria-current="page">Data Master Pelanggan</li>
+            <li class="breadcrumb-item"><a href="{{ route('petugas.index') }}">Petugas</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Pilih Pelanggan</li>
         </ol>
     </nav>
+    
     <div class="row">
         <div class="col-md-12 grid-margin stretch-card">
             <div class="card">
                 <div class="card-body">
+                    <!-- Notification area for conflicts -->
+                    @if(session('conflicts'))
+                    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                        <h5 class="mb-2"><i class="icon fas fa-exclamation-triangle"></i> Peringatan!</h5>
+                        <p><strong>Apakah anda yakin penugasan diganti?</strong> Terdapat pelanggan yang sudah ditugaskan ke petugas lain:</p>
+                        
+                        <ul class="mb-3">
+                            @foreach(session('conflicts') as $conflict)
+                                <li>
+                                    Pelanggan <strong>{{ $conflict['pelanggan_name'] }}</strong> 
+                                    saat ini ditugaskan ke petugas <strong>{{ $conflict['petugas_name'] }}</strong>
+                                </li>
+                            @endforeach
+                        </ul>
+                        
+                        <p>Jika anda melanjutkan, hak akses petugas lama akan dihapus dan diperbarui dengan hak akses yang baru.</p>
+                        
+                        <form action="{{ route('petugas.updateAkses', $petugas->id_users) }}" method="POST">
+                            @csrf
+                            @foreach(session('new_assignments') as $id)
+                                <input type="hidden" name="pelanggan_ids[]" value="{{ $id }}">
+                            @endforeach
+                            <input type="hidden" name="confirm_reassign" value="1">
+                            <div class="mt-3">
+                                <button type="submit" class="btn btn-danger">Ya, Ganti Penugasan</button>
+                                <a href="{{ route('petugas.pilihPelanggan', $petugas->id_users) }}" class="btn btn-secondary ml-2">Batal</a>
+                          </div>
+                        </form>
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    @endif
+
                     <div class="d-flex justify-content-between align-items-center flex-wrap mb-4">
                         <h4 class="mb-3 mb-md-2">Pilih Pelanggan untuk Petugas: {{ $petugas->nama }}</h4>
                         
-                        <!-- Tombol Simpan Akses dipindahkan ke sini -->
+                        <!-- Tombol Simpan Akses -->
                         <form action="{{ route('petugas.updateAkses', $petugas->id_users) }}" method="POST" id="aksesPelangganForm">
                             @csrf
                             <!-- Input hidden untuk menyimpan state saat ini -->
