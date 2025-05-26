@@ -22,13 +22,11 @@ use App\Http\Controllers\DendaController;
 
 Route::get('/', [AuthController::class, 'login'])->name('login');
 Route::post('loginsukses', [AuthController::class, 'loginsukses'])->name('loginsukses');
-
-
+Route::get('auth/lupa-password', [AuthController::class, 'lupaPassword'])->name('auth.lupa-password');
+Route::post('/api/auth/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::middleware(['auth'])->group(function () {
-
     Route::post('logout', [AuthController::class, 'logout'])->name('logout');
-    Route::resource('/profile', ProfileController::class);
-    Route::get('/profile/{username}/edit-password', [ProfileController::class, 'editPassword'])
+    Route::resource('/profile', ProfileController::class);Route::get('/profile/{username}/edit-password', [ProfileController::class, 'editPassword'])
         ->name('profile.edit-password');
     Route::put('/profile/{username}/update-password', [ProfileController::class, 'updatePassword'])->name('profile.updatePassword');
     Route::middleware(['auth', 'role:petugas'])->group(function () {
@@ -64,7 +62,6 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('/DashboardAdmin', DashboardAdminController::class);
     Route::get('/api/laporan-data', [DashboardAdminController::class, 'getLaporanData'])->name('api.laporan-data');
     // Add this to your routes/api.php file:
-
     Route::get('/laporan-data', [App\Http\Controllers\DashboardAdminController::class, 'getLaporanData']);
 
 });
