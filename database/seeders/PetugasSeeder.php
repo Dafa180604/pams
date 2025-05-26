@@ -43,26 +43,13 @@ class PetugasSeeder extends Seeder
             'no_hp' => generateIndonesianPhoneNumber(),
             'role' => 'petugas',
             'password' => bcrypt('Mahfudi@2'),
+            'akses_pelanggan' => json_encode(["5", "6"]),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
         DB::table('users')->insert([
             'id_users' => 3,
-            'nama' => 'Ngatemin',
-            'alamat' => 'watuduwur',
-            'rw' => '1',
-            'rt' => '1',
-            'username' => 'ngatemin003',
-            'no_hp' => generateIndonesianPhoneNumber(),
-            'role' => 'petugas',
-            'password' => bcrypt('Ngatemin@3'),
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        DB::table('users')->insert([
-            'id_users' => 4,
             'nama' => 'Udhik',
             'alamat' => 'pulorjo',
             'rw' => '1',
@@ -71,12 +58,13 @@ class PetugasSeeder extends Seeder
             'no_hp' => generateIndonesianPhoneNumber(),
             'role' => 'petugas',
             'password' => bcrypt('Udhik@4'),
+            'akses_pelanggan' => json_encode(["12", "13","14","15","16"]),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
         DB::table('users')->insert([
-            'id_users' => 5,
+            'id_users' => 4,
             'nama' => 'Imam',
             'alamat' => 'Babadan',
             'rw' => '1',
@@ -85,6 +73,7 @@ class PetugasSeeder extends Seeder
             'no_hp' => generateIndonesianPhoneNumber(),
             'role' => 'petugas',
             'password' => bcrypt('Imam@5'),
+            'akses_pelanggan' => json_encode(["17", "18", "19","20","21","22","23"]),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
