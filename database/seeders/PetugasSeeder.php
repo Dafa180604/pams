@@ -43,7 +43,7 @@ class PetugasSeeder extends Seeder
             'no_hp' => generateIndonesianPhoneNumber(),
             'role' => 'petugas',
             'password' => bcrypt('Mahfudi@2'),
-            'akses_pelanggan' => json_encode(["5", "6"]),
+            'akses_pelanggan' => json_encode(["5", "6","7","8","9","10","11"]),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
