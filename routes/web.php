@@ -23,7 +23,7 @@ use App\Http\Controllers\DendaController;
 Route::get('/', [AuthController::class, 'login'])->name('login');
 Route::post('loginsukses', [AuthController::class, 'loginsukses'])->name('loginsukses');
 Route::get('auth/lupa-password', [AuthController::class, 'lupaPassword'])->name('auth.lupa-password');
-Route::post('/api/auth/forgot-password', [AuthController::class, 'forgotPassword']);
+Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword'])->name('auth.forgot-password');
 Route::middleware(['auth'])->group(function () {
     Route::post('logout', [AuthController::class, 'logout'])->name('logout');
     Route::resource('/profile', ProfileController::class);Route::get('/profile/{username}/edit-password', [ProfileController::class, 'editPassword'])

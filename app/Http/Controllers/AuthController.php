@@ -71,10 +71,12 @@ class AuthController extends Controller
         Auth::logout();
         return redirect('/')->with('berhasillogout', 'logout');
     }
+    
     public function lupaPassword()
     {
         return view('auth.lupa-password'); // Pastikan file blade ini ada
     }
+
     public function forgotPassword(Request $request)
     {
         try {
@@ -90,16 +92,13 @@ class AuthController extends Controller
             $inputPhone = $request->no_hp;
 
             // Format nomor HP untuk pencarian
-            $searchPhones = $this->generatePhoneVariations($inputPhone);
+            $searchPhones = $this->generatePhoneVariations($inputPhone); 
 
             // Cari user berdasarkan nomor HP
             $user = Users::whereIn('no_hp', $searchPhones)->first();
 
             if (!$user) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Nomor WhatsApp tidak terdaftar di sistem. Silakan hubungi admin untuk registrasi.'
-                ], 404);
+                return redirect()->back()->with('error', 'Nomor WhatsApp tidak terdaftar di sistem. Silakan hubungi admin untuk registrasi.');
             }
 
             // Generate password baru (8 karakter, mudah diingat)
@@ -114,35 +113,24 @@ class AuthController extends Controller
             // Kirim username dan password ke WhatsApp
             $waResult = $this->sendCredentialsToWhatsApp($user, $newPassword, $inputPhone);
 
+            log::info("WhatsApp API response for user {$user->username}: " . json_encode($waResult));
+
             if ($waResult['success']) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Username dan password baru telah dikirim ke WhatsApp Anda. Silakan cek pesan masuk.'
-                ]);
+                return redirect()->back()->with('success', 'Username dan password baru telah dikirim ke WhatsApp Anda. Silakan cek pesan masuk.');
             } else {
-                // Jika gagal kirim WA, rollback password (opsional)
-                // Atau biarkan password sudah terupdate tapi beri pesan berbeda
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Password berhasil direset, namun gagal mengirim ke WhatsApp. Silakan hubungi admin untuk mendapatkan password baru.'
-                ]);
+                return redirect()->back()->with('error', 'Password berhasil direset, namun gagal mengirim ke WhatsApp. Silakan hubungi admin untuk mendapatkan password baru.');
             }
 
         } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->validator->errors()->first()
-            ], 422);
+            return redirect()->back()->withErrors($e->validator)->withInput();
 
         } catch (\Exception $e) {
             Log::error('Error in forgotPassword: ' . $e->getMessage());
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Terjadi kesalahan sistem. Silakan coba lagi atau hubungi admin.'
-            ], 500);
+            return redirect()->back()->with('error', 'Terjadi kesalahan sistem. Silakan coba lagi atau hubungi admin.');
         }
     }
+
 
     /**
      * Generate variasi format nomor HP untuk pencarian
