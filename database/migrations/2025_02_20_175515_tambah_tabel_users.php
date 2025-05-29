@@ -17,8 +17,8 @@ return new class extends Migration
             $table->string('alamat');
             $table->string('rw');
             $table->string('rt');
-            $table->string('no_hp');
-            $table->string('username');
+            $table->string('no_hp')->unique();
+            $table->string('username')->unique();
             $table->string('password');
             $table->string('role');
             $table->string('foto_profile')->nullable();
