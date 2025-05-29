@@ -43,7 +43,7 @@
                                 </div>
                             </div>
                             <div class="mt-3">
-                                <a href="" class="btn btn-secondary me-2">Batal</a>
+                                <a href="{{ route('keluhan.index') }}" class="btn btn-secondary me-2">Batal</a>
                                 <button type="submit" class="btn btn-primary">Tambahkan</button>
                             </div>
                         </form>

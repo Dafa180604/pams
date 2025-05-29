@@ -593,8 +593,6 @@
 
         <!-- Right Panel - Form Section -->
         <div class="right-panel">
-            <button class="back-btn" onclick="goBack()">←</button>
-
             <div class="form-section">
                 <div class="form-header">
                     <h2>Lupa Username/Password?</h2>
@@ -602,20 +600,20 @@
                 </div>
 
                 @if (session('success'))
-                    <div id="successMessage" class="success-message"> 
+                    <div id="successMessage" class="success-message">
                         <span id="successText">{{ session('success') }}</span>
                     </div>
                 @endif
 
                 @if (session('error'))
-                    <div id="errorMessage" class="error-message"> 
+                    <div id="errorMessage" class="error-message">
                         <span id="errorText">{{ session('error') }}</span>
                     </div>
                 @endif
 
                 @if (session('success'))
                     <script>
-                        document.addEventListener("DOMContentLoaded", function() {
+                        document.addEventListener("DOMContentLoaded", function () {
                             const successMessage = document.getElementById("successMessage");
                             const successText = document.getElementById("successText");
                             successText.textContent = @json(session('success'));
@@ -626,14 +624,14 @@
 
                 @if (session('error'))
                     <script>
-                        document.addEventListener("DOMContentLoaded", function() {
+                        document.addEventListener("DOMContentLoaded", function () {
                             const errorMessage = document.getElementById("errorMessage");
                             const errorText = document.getElementById("errorText");
                             errorText.textContent = @json(session('error'));
                             errorMessage.style.display = "block";
                         });
                     </script>
-                @endif 
+                @endif
 
                 <form action="{{ Route('auth.forgot-password') }}" method="POST">
                     @csrf
@@ -665,7 +663,7 @@
                 </form>
 
                 <div class="back-to-login">
-                    <a href="javascript:goBack()">← Kembali ke Halaman Login</a>
+                    <a href="{{ route('login') }}">← Kembali ke Halaman Login</a>
                 </div>
             </div>
         </div>
@@ -673,7 +671,7 @@
 
     <script>
         // Basic input formatting - only numbers
-        document.getElementById('phoneNumber').addEventListener('input', function(e) {
+        document.getElementById('phoneNumber').addEventListener('input', function (e) {
             let value = e.target.value.replace(/\D/g, '');
             e.target.value = value;
         });
@@ -684,7 +682,7 @@
         }
 
         // Auto focus on phone input when page loads
-        window.addEventListener('load', function() {
+        window.addEventListener('load', function () {
             document.getElementById('phoneNumber').focus();
         });
     </script>

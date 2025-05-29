@@ -41,7 +41,8 @@
                                             <tr>
                                                 <td class="fw-bold">Alamat</td>
                                                 <td>: {{ $user->alamat ?? '-' }}, RT: {{ $user->rt ?? '-' }}, RW:
-                                                    {{ $user->rw ?? '-' }}</td>
+                                                    {{ $user->rw ?? '-' }}
+                                                </td>
                                             </tr>
                                             <tr>
                                                 <td class="fw-bold">No. Telepon</td>
@@ -74,22 +75,20 @@
                                         <h5 class="card-title text-primary mb-0">Foto Bukti Keluhan</h5>
                                     </div>
                                     <div class="card-body text-center">
-                                       @if(!empty($data->foto_keluhan))
+                                        @if(!empty($data->foto_keluhan))
                                             @if(Str::startsWith($data->foto_keluhan, 'https://'))
-                                                <img src="{{ $data->foto_keluhan }}" alt="Foto Keluhan"
-                                                    class="img-fluid rounded"
+                                                <img src="{{ $data->foto_keluhan }}" alt="Foto Keluhan" class="img-fluid rounded"
                                                     style="max-height: 250px; cursor: pointer;"
                                                     onclick="openImage('{{ $data->foto_keluhan }}')">
                                             @else
                                                 <img src="{{ asset('storage/' . $data->foto_keluhan) }}" alt="Foto Keluhan"
-                                                    class="img-fluid rounded"
-                                                    style="max-height: 250px; cursor: pointer;"
+                                                    class="img-fluid rounded" style="max-height: 250px; cursor: pointer;"
                                                     onclick="openImage('{{ asset('storage/' . $data->foto_keluhan) }}')">
                                             @endif
                                         @else
                                             <div class="alert alert-info">Tidak ada foto yang diunggah</div>
                                         @endif
-                                                                            </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -133,13 +132,12 @@
                                                     <div class="invalid-feedback">{{ $message }}</div>
                                                 @enderror
                                             </div>
-
-                                            <div class="mt-4 text-end">
-                                                <a href="{{ route('keluhan.index') }}" class="btn btn-secondary me-2">
+                                            <div class="mt-4 d-flex flex-wrap justify-content-between gap-2">
+                                                <a href="{{ route('keluhan.index') }}" class="btn btn-secondary">
                                                     <i class="feather icon-arrow-left me-1"></i> Kembali
                                                 </a>
                                                 <button type="submit" class="btn btn-primary">
-                                                    <i class="feather icon-save me-1"></i> Simpan Tanggapan
+                                                    <i class="feather icon-save me-1"></i> Tanggapi
                                                 </button>
                                             </div>
                                         </form>
@@ -152,7 +150,7 @@
             </div>
         </div>
     </div>
-        <div id="imagePopup" class="popup-overlay" style="display: none;">
+    <div id="imagePopup" class="popup-overlay" style="display: none;">
         <span class="close-btn" onclick="closeImage()">×</span>
         <img id="largeImage" src="" alt="Large Image">
     </div>

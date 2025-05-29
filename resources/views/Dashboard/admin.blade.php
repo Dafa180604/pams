@@ -18,9 +18,6 @@
                     <input type="text" class="form-control bg-transparent border-primary" placeholder="Select date"
                         id="dateTimeInput" disabled>
                 </div>
-                <!-- <button id="refreshData" class="btn btn-primary ms-2">
-                                                <i data-feather="refresh-cw" class="icon-sm"></i> Refresh Data
-                                            </button> -->
             </div>
         </div>
 
@@ -91,7 +88,6 @@
             </div>
         </div> <!-- row -->
 
-        <!-- Charts row - Fixed to be side by side -->
         <!-- Loading spinner -->
         <div id="chartLoadingSpinner"
             style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.7); z-index: 1000; align-items: center; justify-content: center;">
@@ -102,7 +98,7 @@
 
         <!-- Summary Cards -->
         <div class="row mb-4">
-            <div class="col-md-4">
+            <div class="col-md-4 mb-3">
                 <div class="card">
                     <div class="card-body d-flex align-items-center">
                         <div class="rounded-circle bg-success-light p-3 me-3">
@@ -115,7 +111,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-4 mb-3">
                 <div class="card">
                     <div class="card-body d-flex align-items-center">
                         <div class="rounded-circle bg-danger-light p-3 me-3">
@@ -128,7 +124,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-4 mb-3">
                 <div class="card">
                     <div class="card-body d-flex align-items-center">
                         <div class="rounded-circle bg-primary-light p-3 me-3">
@@ -144,23 +140,21 @@
         </div>
 
         <div class="row">
-<!--             <div class="d-flex justify-content-between align-items-baseline mb-2 mt-2 px-3">
-                <h5>GRAFIK LAPORAN</h5>
-            </div> -->
             <!-- Bar Chart -->
             <div class="col-xl-12 grid-margin stretch-card">
                 <div class="card">
                     <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-baseline mb-4">
-                            <h6 class="card-title mb-0">Pemasukan & Pengeluaran</h6>
-                            <div class="d-flex align-items-center">
-                                <select id="yearFilter" class="form-select form-select-sm me-2" style="width: 100px;">
+                        <!-- Mobile-friendly filter layout -->
+                        <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap">
+                            <h6 class="card-title mb-2 mb-md-0">Pemasukan & Pengeluaran</h6>
+                            <div class="d-flex align-items-center flex-wrap gap-2">
+                                <select id="yearFilter" class="form-select form-select-sm" style="min-width: 80px;">
                                     @foreach($years ?? range(date('Y') - 3, date('Y')) as $year)
                                         <option value="{{ $year }}" {{ $year == date('Y') ? 'selected' : '' }}>{{ $year }}
                                         </option>
                                     @endforeach
                                 </select>
-                                <select id="barChartMonthFilter" class="form-select form-select-sm" style="width: 100px;">
+                                <select id="barChartMonthFilter" class="form-select form-select-sm" style="min-width: 100px;">
                                     <option value="all" selected>Semua Bulan</option>
                                     <option value="01">Januari</option>
                                     <option value="02">Februari</option>
@@ -177,7 +171,8 @@
                                 </select>
                             </div>
                         </div>
-                        <div style="height: 350px;">
+                        <!-- Responsive chart container -->
+                        <div class="chart-container" style="position: relative; height: 300px; width: 100%;">
                             <canvas id="groupedBarChart"></canvas>
                         </div>
                     </div>
@@ -185,6 +180,50 @@
             </div>
         </div> <!-- row -->
     </div> <!-- page-content -->
+
+    <!-- Add mobile-specific styles -->
+    <style>
+        /* Mobile responsiveness for charts */
+        @media (max-width: 768px) {
+            .chart-container {
+                height: 250px !important;
+            }
+            
+            .card-title {
+                font-size: 0.9rem;
+            }
+            
+            .form-select-sm {
+                font-size: 0.8rem;
+                padding: 0.25rem 0.5rem;
+            }
+            
+            /* Adjust filter layout on very small screens */
+            @media (max-width: 480px) {
+                .d-flex.flex-wrap.gap-2 {
+                    width: 100%;
+                    justify-content: flex-start;
+                    margin-top: 0.5rem;
+                }
+                
+                .form-select-sm {
+                    flex: 1;
+                    min-width: auto;
+                }
+                
+                .chart-container {
+                    height: 220px !important;
+                }
+            }
+        }
+        
+        /* Enhanced mobile touch targets */
+        @media (max-width: 768px) {
+            .form-select {
+                min-height: 44px; /* iOS accessibility guideline */
+            }
+        }
+    </style>
 
     <script>
         function updateTime() {
@@ -211,160 +250,233 @@
     <!-- Chart.js script -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 
-    <!-- Enhanced chart scripts with DB integration -->
+    <!-- Enhanced mobile-responsive chart scripts -->
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-    const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    
-    let barChart;
+            const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            
+            let barChart;
 
-    // Load chart data from the server
-    function fetchChartData(year, callback) {
-        // Show loading indicator
-        document.getElementById('chartLoadingSpinner').style.display = 'flex';
-        
-        // Prepare URL with parameters
-        let url = `/api/laporan-data?year=${year}`;
-        
-        // Use AJAX to fetch data from your Laravel backend
-        fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                callback(data);
-                // Hide loading indicator
-                document.getElementById('chartLoadingSpinner').style.display = 'none';
-            })
-            .catch(error => {
-                console.error('Error fetching chart data:', error);
-                // Hide loading indicator even on error
-                document.getElementById('chartLoadingSpinner').style.display = 'none';
-            });
-    }
-
-    // Function to initialize/update bar chart
-    function updateBarChart(chartData, year, monthFilter = 'all') {
-        const ctx = document.getElementById('groupedBarChart').getContext('2d');
-
-        // Filter data based on month if needed
-        let labels = monthLabels;
-        let pemasukanData = chartData.pemasukan;
-        let pengeluaranData = chartData.pengeluaran;
-
-        if (monthFilter !== 'all') {
-            const monthIndex = parseInt(monthFilter) - 1;
-            labels = [monthLabels[monthIndex]];
-            pemasukanData = [chartData.pemasukan[monthIndex]];
-            pengeluaranData = [chartData.pengeluaran[monthIndex]];
-        }
-
-        const data = {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'Pemasukan',
-                    data: pemasukanData,
-                    backgroundColor: '#5D7DF9',
-                },
-                {
-                    label: 'Pengeluaran',
-                    data: pengeluaranData,
-                    backgroundColor: '#FF3366',
-                }
-            ]
-        };
-
-        // Configuration options
-        const config = {
-            type: 'bar',
-            data: data,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        grid: {
-                            display: false,
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: "rgba(0, 0, 0, 0.1)",
-                            borderDash: [3, 3]
-                        },
-                        ticks: {
-                            // Format in millions
-                            callback: function (value) {
-                                if (value >= 1000000) {
-                                    return (value / 1000000).toFixed(1) + ' Juta';
-                                } else if (value >= 1000) {
-                                    return (value / 1000).toFixed(0) + ' Ribu';
-                                }
-                                return value;
-                            }
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        position: 'top',
-                    },
-                    title: {
-                        display: true,
-                        text: `Laporan ${year}`
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function (context) {
-                                const label = context.dataset.label || '';
-                                const value = context.raw || 0;
-                                return `${label}: Rp ${value.toLocaleString('id-ID')}`;
-                            }
-                        }
-                    }
-                },
+            // Detect if device is mobile
+            function isMobile() {
+                return window.innerWidth <= 768;
             }
-        };
 
-        // Destroy previous chart if it exists
-        if (barChart) {
-            barChart.destroy();
-        }
+            // Load chart data from the server
+            function fetchChartData(year, callback) {
+                document.getElementById('chartLoadingSpinner').style.display = 'flex';
+                
+                let url = `/api/laporan-data?year=${year}`;
+                
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        callback(data);
+                        document.getElementById('chartLoadingSpinner').style.display = 'none';
+                    })
+                    .catch(error => {
+                        console.error('Error fetching chart data:', error);
+                        document.getElementById('chartLoadingSpinner').style.display = 'none';
+                    });
+            }
 
-        // Create the chart
-        barChart = new Chart(ctx, config);
-    }
+            // Function to initialize/update bar chart with mobile optimizations
+            function updateBarChart(chartData, year, monthFilter = 'all') {
+                const ctx = document.getElementById('groupedBarChart').getContext('2d');
 
-    // Function to update both charts
-    function updateCharts() {
-        const selectedYear = document.getElementById('yearFilter').value;
-        const barChartMonthFilter = document.getElementById('barChartMonthFilter').value;
+                // Filter data based on month if needed
+                let labels = monthLabels;
+                let pemasukanData = chartData.pemasukan;
+                let pengeluaranData = chartData.pengeluaran;
 
-        fetchChartData(selectedYear, function (chartData) {
-            updateBarChart(chartData, selectedYear, barChartMonthFilter);
+                if (monthFilter !== 'all') {
+                    const monthIndex = parseInt(monthFilter) - 1;
+                    labels = [monthLabels[monthIndex]];
+                    pemasukanData = [chartData.pemasukan[monthIndex]];
+                    pengeluaranData = [chartData.pengeluaran[monthIndex]];
+                }
 
-            // Update total counters
-            document.getElementById('totalPemasukan').textContent = formatRupiah(chartData.total_pemasukan);
-            document.getElementById('totalPengeluaran').textContent = formatRupiah(chartData.total_pengeluaran);
-            document.getElementById('totalBalance').textContent = formatRupiah(chartData.balance);
+                const data = {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Pemasukan',
+                            data: pemasukanData,
+                            backgroundColor: '#5D7DF9',
+                            borderRadius: isMobile() ? 2 : 4,
+                            maxBarThickness: isMobile() ? 30 : 50,
+                        },
+                        {
+                            label: 'Pengeluaran',
+                            data: pengeluaranData,
+                            backgroundColor: '#FF3366',
+                            borderRadius: isMobile() ? 2 : 4,
+                            maxBarThickness: isMobile() ? 30 : 50,
+                        }
+                    ]
+                };
+
+                // Mobile-optimized configuration
+                const config = {
+                    type: 'bar',
+                    data: data,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        devicePixelRatio: window.devicePixelRatio || 1,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false,
+                        },
+                        scales: {
+                            x: {
+                                grid: {
+                                    display: false,
+                                },
+                                ticks: {
+                                    font: {
+                                        size: isMobile() ? 10 : 12
+                                    },
+                                    maxRotation: isMobile() ? 45 : 0,
+                                    minRotation: 0
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: "rgba(0, 0, 0, 0.1)",
+                                    borderDash: [3, 3]
+                                },
+                                ticks: {
+                                    font: {
+                                        size: isMobile() ? 9 : 11
+                                    },
+                                    // Format in millions with shorter text on mobile
+                                    callback: function (value) {
+                                        if (isMobile()) {
+                                            if (value >= 1000000) {
+                                                return (value / 1000000).toFixed(1) + 'M';
+                                            } else if (value >= 1000) {
+                                                return (value / 1000).toFixed(0) + 'K';
+                                            }
+                                            return value;
+                                        } else {
+                                            if (value >= 1000000) {
+                                                return (value / 1000000).toFixed(1) + ' Juta';
+                                            } else if (value >= 1000) {
+                                                return (value / 1000).toFixed(0) + ' Ribu';
+                                            }
+                                            return value;
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                labels: {
+                                    font: {
+                                        size: isMobile() ? 10 : 12
+                                    },
+                                    padding: isMobile() ? 10 : 20,
+                                    usePointStyle: true,
+                                    pointStyle: 'circle'
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: `Laporan ${year}`,
+                                font: {
+                                    size: isMobile() ? 12 : 14
+                                }
+                            },
+                            tooltip: {
+                                enabled: true,
+                                mode: 'index',
+                                intersect: false,
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                titleFont: {
+                                    size: isMobile() ? 11 : 13
+                                },
+                                bodyFont: {
+                                    size: isMobile() ? 10 : 12
+                                },
+                                callbacks: {
+                                    label: function (context) {
+                                        const label = context.dataset.label || '';
+                                        const value = context.raw || 0;
+                                        return `${label}: Rp ${value.toLocaleString('id-ID')}`;
+                                    }
+                                }
+                            }
+                        },
+                        // Animation optimizations for mobile
+                        animation: {
+                            duration: isMobile() ? 750 : 1000,
+                            easing: 'easeOutQuart'
+                        },
+                        elements: {
+                            bar: {
+                                borderWidth: 0,
+                            }
+                        }
+                    }
+                };
+
+                // Destroy previous chart if it exists
+                if (barChart) {
+                    barChart.destroy();
+                }
+
+                // Create the chart
+                barChart = new Chart(ctx, config);
+            }
+
+            // Function to update charts with mobile considerations
+            function updateCharts() {
+                const selectedYear = document.getElementById('yearFilter').value;
+                const barChartMonthFilter = document.getElementById('barChartMonthFilter').value;
+
+                fetchChartData(selectedYear, function (chartData) {
+                    updateBarChart(chartData, selectedYear, barChartMonthFilter);
+
+                    // Update total counters
+                    document.getElementById('totalPemasukan').textContent = formatRupiah(chartData.total_pemasukan);
+                    document.getElementById('totalPengeluaran').textContent = formatRupiah(chartData.total_pengeluaran);
+                    document.getElementById('totalBalance').textContent = formatRupiah(chartData.balance);
+                });
+            }
+
+            // Format number to Rupiah
+            function formatRupiah(number) {
+                return new Intl.NumberFormat('id-ID', {
+                    style: 'currency',
+                    currency: 'IDR',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                }).format(number);
+            }
+
+            // Handle window resize for responsive behavior
+            let resizeTimeout;
+            window.addEventListener('resize', function() {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(function() {
+                    if (barChart) {
+                        barChart.resize();
+                        // Optionally update chart options based on new size
+                        updateCharts();
+                    }
+                }, 150);
+            });
+
+            // Initialize charts with default values
+            updateCharts();
+
+            // Event listeners for filters
+            document.getElementById('yearFilter').addEventListener('change', updateCharts);
+            document.getElementById('barChartMonthFilter').addEventListener('change', updateCharts);
         });
-    }
-
-    // Format number to Rupiah
-    function formatRupiah(number) {
-        return new Intl.NumberFormat('id-ID', {
-            style: 'currency',
-            currency: 'IDR',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
-        }).format(number);
-    }
-
-    // Initialize charts with default values
-    updateCharts();
-
-    // Event listeners for filters
-    document.getElementById('yearFilter').addEventListener('change', updateCharts);
-    document.getElementById('barChartMonthFilter').addEventListener('change', updateCharts);
-});  </script>
+    </script>
 @endsection
