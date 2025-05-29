@@ -129,7 +129,7 @@
     <div class="header">
         <div class="logo">💧</div>
         <h1>PAMSIMAS</h1>
-        <p>Dsn.Watuduwur Ds.Tenggerlor</p>
+        <p>Ds.Tenggerlor</p>
         <p>Kec.Kunjang Kab.Kediri</p>
         <p>Telp: +62 857-8599-5219</p>
     </div>
