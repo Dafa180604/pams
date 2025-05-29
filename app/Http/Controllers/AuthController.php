@@ -216,10 +216,7 @@ class AuthController extends Controller
             $message .= "⚠️ *PENTING:*\n";
             $message .= "• Segera login dan ganti password Anda\n";
             $message .= "• Jangan bagikan informasi ini kepada siapapun\n";
-            $message .= "• Simpan password dengan aman\n\n";
-            $message .= "*🌐 Link Login:*\n";
-            $message .= "https://dev.airtenggerlor.biz.id/login\n\n";
-            $message .= "_Pesan otomatis dari KPSPAMS DS.TENGGERLOR_";
+            $message .= "• Simpan password dengan aman\n";
 
             // Kirim ke WhatsApp API
             $curl = curl_init();
