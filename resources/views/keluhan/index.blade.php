@@ -22,10 +22,10 @@
                                 Data users Keluhan
                             </h4>
                             <div class="d-flex align-items-center flex-wrap text-nowrap">
-                                    <a href="{{ route('keluhan.create') }}" class="btn btn-primary d-flex align-items-center">
+                                    <!-- <a href="{{ route('keluhan.create') }}" class="btn btn-primary d-flex align-items-center">
                                         <i class="btn-icon-prepend" data-feather="plus-square"></i>
                                         <span class="ms-2">Tambah Data</span>
-                                    </a>
+                                    </a> -->
                                 </div>
                         </div>
                         <div class="table-responsive">
