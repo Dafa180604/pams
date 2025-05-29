@@ -108,7 +108,7 @@ class AuthController extends Controller
                 return response()->json([
                     'success' => false,
                     'code' => 404,
-                    'message' => 'Nomor WhatsApp tidak terdaftar di sistem. Silakan hubungi admin untuk registrasi.',
+                    'message' => 'Nomor WhatsApp tidak terdaftar di sistem. Silakan datang ke kantor Pamsimas.',
                     'data' => null
                 ]);
             }
