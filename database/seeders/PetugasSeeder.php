@@ -43,7 +43,7 @@ class PetugasSeeder extends Seeder
             'no_hp' => generateIndonesianPhoneNumber(),
             'role' => 'petugas',
             'password' => bcrypt('mahfudipetugas'),
-            'akses_pelanggan' => json_encode(["5", "6","7","8","9","10","11"]),
+            'akses_pelanggan' => json_encode(["5", "6","7","8","9",]),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -58,7 +58,7 @@ class PetugasSeeder extends Seeder
             'no_hp' => generateIndonesianPhoneNumber(),
             'role' => 'petugas',
             'password' => bcrypt('udhikpetugas'),
-            'akses_pelanggan' => json_encode(["12", "13","14","15","16"]),
+            'akses_pelanggan' => json_encode(["10", "11","12","13","14"]),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -73,7 +73,7 @@ class PetugasSeeder extends Seeder
             'no_hp' => generateIndonesianPhoneNumber(),
             'role' => 'petugas',
             'password' => bcrypt('imampetugas'),
-            'akses_pelanggan' => json_encode(["17", "18", "19","20","21","22","23"]),
+            'akses_pelanggan' => json_encode(["15", "16", "17","18","19"]),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
