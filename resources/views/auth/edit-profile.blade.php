@@ -15,9 +15,9 @@
                     <!-- Foto Profile -->
                     <div class="flex justify-center">
                         <div class="relative">
-                            <img id="profile-image" class="w-32 h-32 rounded-full border-2 border-gray-300 object-cover"
+                            <img id="profile-image" class="w-32 h-32 rounded-full border-2 border-gray-300 object-cover cursor-pointer"
                                 src="{{ strpos($data->foto_profile, 'storage.googleapis.com') !== false ? $data->foto_profile : asset('storage/' . $data->foto_profile) }}"
-                                alt="Profile Photo">
+                                alt="Profile Photo" onclick="openImage(this.src)">
                             <input type="file" id="fileInput" name="foto_profile" class="hidden" accept="image/*" />
                             <label for="fileInput"
                                 class="absolute bottom-0 right-0 p-2 bg-blue-500 text-white rounded-full cursor-pointer">
@@ -138,7 +138,72 @@
     </div>
 </div>
 
+<!-- Image Popup -->
+<div id="imagePopup" class="popup-overlay" style="display: none;">
+    <span class="close-btn" onclick="closeImage()">×</span>
+    <img id="largeImage" src="" alt="Large Image">
+</div>
+
+<style>
+    .popup-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+    }
+    #largeImage {
+        max-width: 90%;
+        max-height: 90%;
+        border: 2px solid white;
+        border-radius: 8px;
+    }
+    .close-btn {
+        position: absolute;
+        top: 20px;
+        right: 30px;
+        font-size: 40px;
+        color: white;
+        cursor: pointer;
+        font-weight: bold;
+        transition: color 0.3s ease;
+    }
+    .close-btn:hover {
+        color: #ccc;
+    }
+</style>
+
 <script>
+    // Image popup functions
+    function openImage(src) {
+        document.getElementById('largeImage').src = src;
+        document.getElementById('imagePopup').style.display = 'flex';
+    }
+    
+    function closeImage() {
+        document.getElementById('imagePopup').style.display = 'none';
+    }
+    
+    // Close popup with Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeImage();
+        }
+    });
+    
+    // Close popup by clicking outside the image
+    document.getElementById('imagePopup').addEventListener('click', function(event) {
+        if (event.target === this) {
+            closeImage();
+        }
+    });
+
+    // File input preview functionality
     document.getElementById('fileInput').addEventListener('change', function (event) {
         const file = event.target.files[0];
         if (file) {
