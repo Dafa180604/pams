@@ -74,6 +74,7 @@ class EditSalahCatatController extends Controller
             // Store old values for reference
             $oldJumlahRp = $transaksi->jumlah_rp;
             $wasAlreadyPaid = ($transaksi->status_pembayaran == 'Lunas');
+            $denda = $transaksi->rp_denda ?? 0; // Ambil denda yang sudah ada
 
             // Update pemakaian data
             $pemakaian->meter_awal = $request->meter_awal;
@@ -89,12 +90,13 @@ class EditSalahCatatController extends Controller
             // Update transaction details
             $transaksi->id_beban_biaya = $billDetails['beban_id'];
             $transaksi->id_kategori_biaya = $billDetails['kategori_id'];
-            $transaksi->jumlah_rp = $billDetails['total'];
+            // Tambahkan denda ke total tagihan
+            $transaksi->jumlah_rp = $billDetails['total'] + $denda;
             $transaksi->detail_biaya = json_encode($billDetails['detail']);
 
             // If payment was already made, adjust kembalian accordingly
             if ($wasAlreadyPaid && $transaksi->uang_bayar) {
-                $transaksi->kembalian = $transaksi->uang_bayar - $billDetails['total'];
+                $transaksi->kembalian = $transaksi->uang_bayar - ($billDetails['total'] + $denda);
 
                 // Only update catatan_edit if the column exists
                 if (Schema::hasColumn('transaksi', 'catatan_edit')) {
@@ -108,8 +110,8 @@ class EditSalahCatatController extends Controller
                             'kembalian' => $transaksi->getOriginal('kembalian')
                         ],
                         'nilai_baru' => [
-                            'jumlah_rp' => $billDetails['total'],
-                            'kembalian' => $transaksi->uang_bayar - $billDetails['total']
+                            'jumlah_rp' => $billDetails['total'] + $denda,
+                            'kembalian' => $transaksi->uang_bayar - ($billDetails['total'] + $denda)
                         ]
                     ];
                     $transaksi->catatan_edit = json_encode($editHistory);
@@ -140,6 +142,7 @@ class EditSalahCatatController extends Controller
                     'November' => 'November',
                     'December' => 'Desember'
                 ];
+                
                 // Ambil nilai petugas dari database
                 $petugasValue = $pemakaian->petugas;
 
@@ -163,14 +166,15 @@ class EditSalahCatatController extends Controller
                 // Format bulan
                 $bulanTeks = $bulanIndonesia[$bulan] ?? $bulan;
 
-                // Buat keterangan sesuai kondisi
-                $keterangan = "Terima bayar {$bulanTeks} {$tahun} oleh {$prefiks} {$petugasName}";
+                // Buat keterangan dasar tanpa status penerimaan
+                $baseKeterangan = "Terima bayar {$bulanTeks} {$tahun} oleh {$prefiks} {$petugasName}";
 
-                // Cari laporan berdasarkan keterangan
-                $laporan = Laporan::where('keterangan', 'like', "%{$keterangan}%")->first();
+                // Cari laporan berdasarkan keterangan dasar (mengabaikan ", diterima" atau ", belum diterima")
+                $laporan = Laporan::where('keterangan', 'like', "{$baseKeterangan}%")->first();
+                
                 if ($laporan) {
-                    // Update report amount
-                    $laporan->uang_masuk = $laporan->uang_masuk - $oldJumlahRp + $billDetails['total'];
+                    // Update report amount - gunakan total dengan denda
+                    $laporan->uang_masuk = $laporan->uang_masuk - $oldJumlahRp + ($billDetails['total'] + $denda);
 
                     // Only update catatan_edit if the column exists
                     if (Schema::hasColumn('laporan', 'catatan_edit')) {
@@ -189,7 +193,6 @@ class EditSalahCatatController extends Controller
                 }
             }
 
-            // Commit transaction
             // Commit transaction
             DB::commit();
 

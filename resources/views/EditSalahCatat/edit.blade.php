@@ -143,7 +143,9 @@
                                                 <input type="number" step="0.01"
                                                     class="form-control @error('meter_awal') is-invalid @enderror"
                                                     id="meter_awal" name="meter_awal"
-                                                    value="{{ old('meter_awal', $pemakaian->meter_awal) }}" required>
+                                                    value="{{ old('meter_awal', $pemakaian->meter_awal) }}" 
+                                                    readonly
+                                                    required>
                                                 @error('meter_awal')
                                                     <div class="invalid-feedback">{{ $message }}</div>
                                                 @enderror

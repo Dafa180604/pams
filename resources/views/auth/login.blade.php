@@ -51,10 +51,15 @@
                                         <div class="text-danger">{{ $message }}</div>
                                     @enderror
                                 </div>
-                                <div class="mb-3 relative">
+                                <div class="mb-3 position-relative">
                                     <label for="password" class="form-label">Password</label>
-                                    <input type="password" class="form-control" id="password" name="password"
-                                        autocomplete="current-password" placeholder="Masukkan Password">
+                                    <div class="input-group">
+                                        <input type="password" class="form-control" id="password" name="password"
+                                            autocomplete="current-password" placeholder="Masukkan Password">
+                                        <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                            <i class="fas fa-eye" id="eyeIcon"></i>
+                                        </button>
+                                    </div>
                                     @error('password')
                                         <div class="text-danger">{{ $message }}</div>
                                     @enderror
@@ -71,123 +76,178 @@
                             </form>
                         </div>
                     </div>
-                    </< /div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Custom CSS untuk responsif dan styling -->
-        <style>
-            .logo-responsive {
-                max-width: 120px;
-                height: auto;
-                /* Menghilangkan filter agar detail logo tetap terlihat */
-                background: #6571FF;
-                border-radius: 50%;
-                padding: 10px;
-                backdrop-filter: blur(5px);
-                border: 2px solid #6571FF;
-            }
+    <!-- Custom CSS untuk responsif dan styling -->
+    <style>
+        .logo-responsive {
+            max-width: 120px;
+            height: auto;
+            background: #6571FF;
+            border-radius: 50%;
+            padding: 10px;
+            backdrop-filter: blur(5px);
+            border: 2px solid #6571FF;
+        }
 
-            /* Container logo dengan styling modern */
-            .logo-container {
-                background: #6571FF;
-                border-radius: 20px;
-                padding: 20px;
-                backdrop-filter: blur(10px);
-                border: 1px solid #6571FF;
-                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            }
+        .logo-container {
+            background: #6571FF;
+            border-radius: 20px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid #6571FF;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
 
+        .auth-side-wrapper {
+            border-radius: 0.375rem 0 0 0.375rem;
+        }
+
+        .forgot-password-link:hover {
+            color: #6571FF !important;
+            text-decoration: underline !important;
+        }
+
+        /* Styling untuk toggle password button */
+        #togglePassword {
+            border-left: 0;
+            background: transparent;
+            color: #6c757d;
+            border-color: #ced4da;
+        }
+
+        #togglePassword:hover {
+            background: transparent;
+            border-color: #ced4da;
+        }
+
+        #togglePassword:focus {
+            box-shadow: none;
+            border-color: #ced4da;
+        }
+
+        .input-group .form-control {
+            border-right: 0;
+        }
+
+        .input-group .form-control:focus {
+            border-right: 0;
+            box-shadow: none;
+            border-color: #ced4da;
+        }
+
+        .input-group .form-control:focus + .btn {
+            border-color: #ced4da;
+        }
+
+        /* Responsif untuk mobile */
+        @media (max-width: 767.98px) {
             .auth-side-wrapper {
-                border-radius: 0.375rem 0 0 0.375rem;
+                min-height: 200px !important;
+                border-radius: 0.375rem 0.375rem 0 0;
             }
 
-            .forgot-password-link:hover {
-                color: #6571FF !important;
-                text-decoration: underline !important;
+            .logo-responsive {
+                max-width: 80px;
+                background: #6571FF;
+                padding: 8px;
             }
 
-            /* Responsif untuk mobile */
-            @media (max-width: 767.98px) {
-                .auth-side-wrapper {
-                    min-height: 200px !important;
-                    border-radius: 0.375rem 0.375rem 0 0;
-                }
-
-                .logo-responsive {
-                    max-width: 80px;
-                    background: #6571FF;
-                    padding: 8px;
-                }
-
-                .logo-container {
-                    padding: 15px !important;
-                }
-
-                .logo-text h4 {
-                    font-size: 1.2rem;
-                }
-
-                .logo-text p {
-                    font-size: 0.8rem;
-                }
-
-                .auth-form-wrapper {
-                    padding: 2rem 1.5rem !important;
-                }
-
-                .d-flex.justify-content-between {
-                    flex-direction: column;
-                    align-items: stretch !important;
-                }
-
-                .forgot-password-link {
-                    text-align: center;
-                    margin-top: 1rem;
-                }
+            .logo-container {
+                padding: 15px !important;
             }
 
-            /* Untuk tablet */
-            @media (min-width: 768px) and (max-width: 991.98px) {
-                .logo-responsive {
-                    max-width: 100px;
-                }
-
-                .logo-container {
-                    padding: 18px;
-                }
+            .logo-text h4 {
+                font-size: 1.2rem;
             }
 
-            /* Untuk desktop */
-            @media (min-width: 992px) {
-                .logo-responsive {
-                    max-width: 140px;
-                }
-
-                .logo-container {
-                    padding: 22px;
-                }
+            .logo-text p {
+                font-size: 0.8rem;
             }
-        </style>
 
+            .auth-form-wrapper {
+                padding: 2rem 1.5rem !important;
+            }
+
+            .d-flex.justify-content-between {
+                flex-direction: column;
+                align-items: stretch !important;
+            }
+
+            .forgot-password-link {
+                text-align: center;
+                margin-top: 1rem;
+            }
+
+            #togglePassword {
+                padding: 0.375rem 0.75rem;
+                font-size: 0.875rem;
+            }
+        }
+
+        /* Untuk tablet */
+        @media (min-width: 768px) and (max-width: 991.98px) {
+            .logo-responsive {
+                max-width: 100px;
+            }
+
+            .logo-container {
+                padding: 18px;
+            }
+        }
+
+        /* Untuk desktop */
+        @media (min-width: 992px) {
+            .logo-responsive {
+                max-width: 140px;
+            }
+
+            .logo-container {
+                padding: 22px;
+            }
+        }
+    </style>
+
+    <!-- Font Awesome untuk icon mata -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <!-- JavaScript untuk toggle password -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const togglePassword = document.getElementById('togglePassword');
+            const passwordInput = document.getElementById('password');
+            const eyeIcon = document.getElementById('eyeIcon');
+
+            togglePassword.addEventListener('click', function() {
+                // Toggle tipe input password
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                
+                // Toggle icon mata
+                if (type === 'text') {
+                    eyeIcon.classList.remove('fa-eye');
+                    eyeIcon.classList.add('fa-eye-slash');
+                } else {
+                    eyeIcon.classList.remove('fa-eye-slash');
+                    eyeIcon.classList.add('fa-eye');
+                }
+            });
+        });
+
+        // Script untuk error message
         @if(session('errorlogin'))
-            <script>
-                // Menampilkan pesan error di elemen dengan ID 'custom-error-message'
-                document.getElementById('custom-error-message').innerHTML = '{{ session('errorlogin') }}';
-
-                // Menunggu 3 detik sebelum menghilangkan pesan
-                setTimeout(function () {
-                    var errorMessage = document.getElementById('custom-error-message');
-                    if (errorMessage) {
-                        errorMessage.style.display = 'none'; // Menghilangkan pesan
-                    }
-                }, 3000); // 3000 ms = 3 detik
-            </script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const errorMessage = document.getElementById('custom-error-message');
+                if (errorMessage) {
+                    setTimeout(function() {
+                        errorMessage.style.display = 'none';
+                    }, 3000);
+                }
+            });
         @endif
-
-        <!-- Script untuk forgot password (opsional) -->
+    </script>
 
 @endsection
-
-

@@ -296,98 +296,104 @@ class PemakaianController extends Controller
     
     // Methid untuk store pembayaran
     public function update(Request $request)
-    {
-        $request->validate([
-            'id_transaksi' => 'required',
-            'uang_bayar' => 'required|numeric'
-        ]);
-    
-        try {
-            $transaksi = Transaksi::findOrFail($request->id_transaksi);
-    
-            $kembalian = $request->uang_bayar - $transaksi->jumlah_rp;
-    
-            $transaksi->tgl_pembayaran = now();
-            $transaksi->status_pembayaran = $request->status_pembayaran ?? 'Lunas';
-            $transaksi->uang_bayar = $request->uang_bayar;
-            $transaksi->kembalian = $kembalian;
-            $transaksi->save();
-    
-            if ($transaksi->status_pembayaran == 'Lunas') {
-                $bulan = date('F');
-                $tahun = date('Y');
-    
-                $bulanIndonesia = [
-                    'January' => 'Januari',
-                    'February' => 'Februari',
-                    'March' => 'Maret',
-                    'April' => 'April',
-                    'May' => 'Mei',
-                    'June' => 'Juni',
-                    'July' => 'Juli',
-                    'August' => 'Agustus',
-                    'September' => 'September',
-                    'October' => 'Oktober',
-                    'November' => 'November',
-                    'December' => 'Desember'
-                ];
-    
-                $pemakaian = $transaksi->pemakaian; 
-                
-                // Get the petugas value - you might need to adjust this based on your exact relationship
-                $petugas = $pemakaian ? $pemakaian->petugas : 'Unknown';
-        
-                $bulanTeks = $bulanIndonesia[$bulan] ?? $bulan;
-                $keterangan = "Terima bayar {$bulanTeks} {$tahun} oleh petugas {$petugas}";
-     
-                $existingLaporan = Laporan::where('keterangan', $keterangan)->first();
-    
-                if ($existingLaporan) {
-                    $existingLaporan->uang_masuk += $transaksi->jumlah_rp;
-                    $existingLaporan->save();
-                } else { 
-                    $laporan = new Laporan();
-                    $laporan->tanggal = now(); // Tetap menggunakan tanggal hari ini untuk field tanggal
-                    $laporan->uang_masuk = $transaksi->jumlah_rp;
-                    $laporan->keterangan = $keterangan;
-                    $laporan->save();
-                }
-            }
+{
+    $request->validate([
+        'id_transaksi' => 'required',
+        'uang_bayar' => 'required|numeric'
+    ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Pembayaran berhasil diproses.',
-                'data' => [
-                    'id_transaksi' => $transaksi->id_transaksi,
-                    'nama_petugas' => Auth::user()->nama ?? 'Unknown',
-                    'nama_pelanggan' => $transaksi->pemakaian->users->nama ?? null,
-                    'alamat_pelanggan' => $transaksi->pemakaian && $transaksi->pemakaian->users
-                    ? trim("{$transaksi->pemakaian->users->alamat}, RT {$transaksi->pemakaian->users->rt} RW {$transaksi->pemakaian->users->rw}")
-                    : '-',
-                    'tanggal_pencatatan' => $transaksi->pemakaian->waktu_catat ?? null,
-                    'tanggal_pembayaran' => $transaksi->tgl_pembayaran ? $transaksi->tgl_pembayaran->format('Y-m-d H:i:s') : null,
+    try {
+        $transaksi = Transaksi::findOrFail($request->id_transaksi);
+
+        $kembalian = $request->uang_bayar - $transaksi->jumlah_rp;
+
+        $transaksi->tgl_pembayaran = now();
+        $transaksi->status_pembayaran = $request->status_pembayaran ?? 'Lunas';
+        $transaksi->uang_bayar = $request->uang_bayar;
+        $transaksi->kembalian = $kembalian;
+        $transaksi->save();
+
+        if ($transaksi->status_pembayaran == 'Lunas') {
+            $bulan = date('F');
+            $tahun = date('Y');
+
+            $bulanIndonesia = [
+                'January' => 'Januari',
+                'February' => 'Februari',
+                'March' => 'Maret',
+                'April' => 'April',
+                'May' => 'Mei',
+                'June' => 'Juni',
+                'July' => 'Juli',
+                'August' => 'Agustus',
+                'September' => 'September',
+                'October' => 'Oktober',
+                'November' => 'November',
+                'December' => 'Desember'
+            ];
+
+            $pemakaian = $transaksi->pemakaian; 
             
-                    'meter_awal' => $transaksi->pemakaian->meter_awal ?? null,
-                    'meter_akhir' => $transaksi->pemakaian->meter_akhir ?? null,
-                    'jumlah_pemakaian' => $transaksi->pemakaian->jumlah_pemakaian ?? null,
-            
-                    'denda' => $transaksi->rp_denda ?? 0,
-                    'detail_biaya' => json_decode($transaksi->detail_biaya, true),
-                    'total_tagihan' => $transaksi->jumlah_rp,
-                    'jumlah_bayar' => $transaksi->uang_bayar,
-                    'kembalian' => $transaksi->kembalian
-                ]
-            ], 200);
+            // Get the petugas value - you might need to adjust this based on your exact relationship
+            $petugas = $pemakaian ? $pemakaian->petugas : 'Unknown';
     
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Terjadi kesalahan: ' . $e->getMessage(),
-                'data' => null
-            ], 500);
+            $bulanTeks = $bulanIndonesia[$bulan] ?? $bulan;
+            $keteranganBase = "Terima bayar {$bulanTeks} {$tahun} oleh petugas {$petugas}";
+ 
+            // Cari laporan berdasarkan pattern keterangan base, dengan mengabaikan suffix status
+            $existingLaporan = Laporan::where(function($query) use ($keteranganBase) {
+                $query->where('keterangan', $keteranganBase)
+                      ->orWhere('keterangan', $keteranganBase . ', belum diterima')
+                      ->orWhere('keterangan', $keteranganBase . ', diterima');
+            })->first();
+
+            if ($existingLaporan) {
+                $existingLaporan->uang_masuk += $transaksi->jumlah_rp;
+                // Update keterangan ke format base tanpa suffix status
+                $existingLaporan->keterangan = $keteranganBase;
+                $existingLaporan->save();
+            } else { 
+                $laporan = new Laporan();
+                $laporan->tanggal = now(); // Tetap menggunakan tanggal hari ini untuk field tanggal
+                $laporan->uang_masuk = $transaksi->jumlah_rp;
+                $laporan->keterangan = $keteranganBase;
+                $laporan->save();
+            }
         }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Pembayaran berhasil diproses.',
+            'data' => [
+                'id_transaksi' => $transaksi->id_transaksi,
+                'nama_petugas' => Auth::user()->nama ?? 'Unknown',
+                'nama_pelanggan' => $transaksi->pemakaian->users->nama ?? null,
+                'alamat_pelanggan' => $transaksi->pemakaian && $transaksi->pemakaian->users
+                ? trim("{$transaksi->pemakaian->users->alamat}, RT {$transaksi->pemakaian->users->rt} RW {$transaksi->pemakaian->users->rw}")
+                : '-',
+                'tanggal_pencatatan' => $transaksi->pemakaian->waktu_catat ?? null,
+                'tanggal_pembayaran' => $transaksi->tgl_pembayaran ? $transaksi->tgl_pembayaran->format('Y-m-d H:i:s') : null,
+        
+                'meter_awal' => $transaksi->pemakaian->meter_awal ?? null,
+                'meter_akhir' => $transaksi->pemakaian->meter_akhir ?? null,
+                'jumlah_pemakaian' => $transaksi->pemakaian->jumlah_pemakaian ?? null,
+        
+                'denda' => $transaksi->rp_denda ?? 0,
+                'detail_biaya' => json_decode($transaksi->detail_biaya, true),
+                'total_tagihan' => $transaksi->jumlah_rp,
+                'jumlah_bayar' => $transaksi->uang_bayar,
+                'kembalian' => $transaksi->kembalian
+            ]
+        ], 200);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Terjadi kesalahan: ' . $e->getMessage(),
+            'data' => null
+        ], 500);
     }
-    
+}
     //Perhitungan
     private static function getBeban(): ?array
     {

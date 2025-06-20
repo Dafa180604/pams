@@ -1,11 +1,11 @@
 @extends('layouts.master')
-@section('title', 'Beban Biaya')
+@section('title', 'Edit Pendeluaran')
 @section('content')
 <div class="page-content">
 
     <nav class="page-breadcrumb">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ route('pengeluaran.index') }}">Data Master Beban Biaya</a></li>
+            <li class="breadcrumb-item"><a href="{{ route('pengeluaran.index') }}">Data Master Edit Pengeluaran</a></li>
             <li class="breadcrumb-item active" aria-current="page">Edit</li>
         </ol>
     </nav>
@@ -14,7 +14,7 @@
         <div class="col-md-12 stretch-card">
             <div class="card">
                 <div class="card-body">
-                    <h4 class="card-title fs-4 mb-4">Form Edit Data Beban Biaya</h4>
+                    <h4 class="card-title fs-4 mb-4">Form Edit Data Pengeluaran</h4>
                     <form action="{{ route('pengeluaran.update', $data->id_laporan) }}" method="POST">
                         @csrf
                         @method('PUT')

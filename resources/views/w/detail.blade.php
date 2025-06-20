@@ -119,7 +119,7 @@
             <tbody>
             <tr class="border-b">
               <td class="py-2 px-4 font-bold">Biaya Denda</td>
-              <td class="py-2 px-4 font-bold text-right">-Rp
+              <td class="py-2 px-4 font-bold text-right">Rp
               {{ number_format($dataTransaksi->rp_denda, 0, ',', '.') }}
               </td>
             </tr>

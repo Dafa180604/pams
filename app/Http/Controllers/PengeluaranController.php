@@ -36,8 +36,8 @@ class PengeluaranController extends Controller
             'uang_keluar' => 'required|numeric',
             'keterangan' => 'required',
         ], [
-            'uang_keluar.required' => 'uang_keluar Wajib Diisi!',
-            'uang_keluar.numeric' => 'uang_keluar Wajib di Isi Angka!',
+            'uang_keluar.required' => 'Tarif Wajib Diisi!',
+            'uang_keluar.numeric' => 'Tarif Wajib di Isi Angka!',
             'keterangan.required' => 'Keterangan Wajib Diisi!',
         ]);
 
@@ -96,8 +96,8 @@ class PengeluaranController extends Controller
             'uang_keluar' => 'required|numeric',
             'keterangan' => 'required',
         ], [
-            'uang_keluar.required' => 'uang_keluar Wajib Diisi!',
-            'uang_keluar.numeric' => 'uang_keluar Wajib di Isi Angka!',
+            'uang_keluar.required' => 'Tarif Wajib Diisi!',
+            'uang_keluar.numeric' => 'Tarif Wajib di Isi Angka!',
             'keterangan.required' => 'Keterangan Wajib Diisi!',
         ]);
 

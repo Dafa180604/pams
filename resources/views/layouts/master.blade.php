@@ -209,6 +209,28 @@
                         });
                     }
                 });
+                //
+                Swal.fire({
+                    title: 'Konfirmasi Perubahan Status',
+                    html: `Apakah Anda yakin ingin mengubah status menjadi <strong>"Belum Diterima"</strong>?`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonClass: 'me-2',
+                    confirmButtonText: 'OK',
+                    cancelButtonText: 'Cancel',
+                    customClass: {
+                        confirmButton: 'btn btn-primary',
+                        cancelButton: 'btn btn-light'
+                    },
+                    buttonsStyling: false,
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Submit the form atau jalankan aksi perubahan status di sini
+                        this.closest('form').submit();
+                    }
+                });
+
             });
         });
     </script>

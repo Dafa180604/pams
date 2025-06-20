@@ -16,8 +16,9 @@ class KategoriBiayaAirController extends Controller
     public function create()
     {
         // Get the last meter reading
-        $last_reading = KategoriBiayaAir::latest()->first();
-        $last_meter_akhir = $last_reading ? $last_reading->batas_atas + 1 : 0;
+       $last_reading = KategoriBiayaAir::orderBy('batas_atas', 'desc')->first();
+       $last_meter_akhir = $last_reading ? $last_reading->batas_atas + 1 : 0;
+
 
         return view('KategoriBiayaAir.create', compact('last_meter_akhir'));
     }

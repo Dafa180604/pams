@@ -8,35 +8,65 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Users;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Str;
 class AuthController extends Controller
 {
     public function login(Request $request)
     {
         // Validasi input
         $request->validate([
-            'username' => 'required',
-            'password' => 'required',
+            'username' => 'required|string',
+            'password' => 'required|string',
         ]);
-    
+
+        // Cek throttle untuk API
+        $throttleKey = $this->apiThrottleKey($request);
+        
+        // Cek apakah sudah mencapai limit
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+            $minutes = ceil($seconds / 60);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Terlalu banyak percobaan login. Silakan coba lagi dalam ' . $minutes . ' menit.',
+                'error_code' => 'TOO_MANY_ATTEMPTS',
+                'retry_after_seconds' => $seconds,
+                'retry_after_minutes' => $minutes,
+            ], 429); // HTTP 429 Too Many Requests
+        }
+
         // Cari user berdasarkan username
         $user = Users::where('username', $request->username)->first();
-    
+
         // Jika user tidak ditemukan
         if (!$user) {
+            // Increment throttle untuk username tidak valid
+            RateLimiter::hit($throttleKey, 60);
+            
+            $attempts = RateLimiter::attempts($throttleKey);
+            $remainingAttempts = 5 - $attempts;
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Username tidak terdaftar!',
+                'error_code' => 'USERNAME_NOT_FOUND',
+                'remaining_attempts' => max(0, $remainingAttempts),
             ], 401);
         }
-    
+
         // Coba login
         if (Auth::attempt(['username' => $request->username, 'password' => $request->password])) {
+            // Login berhasil - clear throttle
+            RateLimiter::clear($throttleKey);
+            
             $user = Auth::user();
-    
+
             // Generate token menggunakan Laravel Sanctum
-            $token = $user->createToken('LaravelApp')->plainTextToken;
-    
+            $token = $user->createToken('MobileApp', ['*'], now()->addDays(30))->plainTextToken;
+
             return response()->json([
                 'success' => true,
                 'message' => 'Login berhasil sebagai ' . $user->role,
@@ -48,17 +78,121 @@ class AuthController extends Controller
                     'username' => $user->username,
                     'role' => $user->role,
                     'foto_profile' => $user->foto_profile,
+                    'login_at' => now()->toISOString(),
                 ],
-                'token' => $token // Menambahkan token ke respons
+                'token' => $token,
+                'token_type' => 'Bearer',
+                'expires_in' => 30 * 24 * 60 * 60, // 30 hari dalam detik
             ]);
         } else {
+            // Password salah - increment throttle
+            RateLimiter::hit($throttleKey, 60);
+            
+            $attempts = RateLimiter::attempts($throttleKey);
+            $remainingAttempts = 5 - $attempts;
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Password salah!',
+                'error_code' => 'INVALID_PASSWORD',
+                'remaining_attempts' => max(0, $remainingAttempts),
             ], 401);
         }
     }
 
+    /**
+     * Get the rate limiting throttle key for API requests.
+     */
+    protected function apiThrottleKey(Request $request): string
+    {
+        return Str::transliterate(
+            'api_login|' . 
+            Str::lower($request->input('username', '')) . '|' . 
+            $request->ip()
+        );
+    }
+
+    /**
+     * Logout API
+     */
+    public function logout(Request $request)
+    {
+        try {
+            // Revoke current token
+            $request->user()->currentAccessToken()->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Logout berhasil',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Logout gagal',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Refresh Token API
+     */
+    public function refreshToken(Request $request)
+    {
+        try {
+            $user = $request->user();
+            
+            // Revoke current token
+            $request->user()->currentAccessToken()->delete();
+            
+            // Create new token
+            $token = $user->createToken('MobileApp', ['*'], now()->addDays(30))->plainTextToken;
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Token berhasil di-refresh',
+                'token' => $token,
+                'token_type' => 'Bearer',
+                'expires_in' => 30 * 24 * 60 * 60,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Refresh token gagal',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Get user profile
+     */
+    public function profile(Request $request)
+    {
+        try {
+            $user = $request->user();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Data profile berhasil diambil',
+                'data' => [
+                    'id' => $user->id_users,
+                    'nama' => $user->nama,
+                    'alamat' => $user->alamat,
+                    'no_hp' => $user->no_hp,
+                    'username' => $user->username,
+                    'role' => $user->role,
+                    'foto_profile' => $user->foto_profile,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengambil data profile',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
     public function ubahPassword(Request $request)
     {
         $request->validate([
@@ -266,12 +400,12 @@ class AuthController extends Controller
                     'target' => $targetPhone,
                     'message' => $message,
                     'countryCode' => '62',
-                    'device' => '6287769491493', // Ganti sesuai Device ID Anda
+                    'device' => '085735326182', // Ganti sesuai Device ID Anda
                     'typing' => true,
                     'delay' => 2,
                 ),
                 CURLOPT_HTTPHEADER => array(
-                    'Authorization: y2GQtBubUi9fsNNcJfN6', // Ganti dengan token API Anda
+                    'Authorization: hzDxTTTbvEgUw8XzpMFR', // Ganti dengan token API Anda
                 ),
             ));
 

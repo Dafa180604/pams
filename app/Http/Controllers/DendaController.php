@@ -49,10 +49,10 @@ class DendaController extends Controller
             }
         ],
     ], [
-        'jumlah_telat.required' => 'Batas Bawah Wajib Diisi!',
-        'jumlah_telat.numeric' => 'Batas Bawah Harus Menggunakan Angka!',
-        'biaya_telat.required' => 'Batas Atas Wajib Diisi!',
-        'biaya_telat.numeric' => 'Batas Atas Harus Menggunakan Angka!',
+        'jumlah_telat.required' => 'Jumlah telat Wajib Diisi!',
+        'jumlah_telat.numeric' => 'Jumlah telat Harus Menggunakan Angka!',
+        'biaya_telat.required' => 'Biaya telat Wajib Diisi!',
+        'biaya_telat.numeric' => 'Biaya telat Harus Menggunakan Angka!',
     ]);
 
     try {

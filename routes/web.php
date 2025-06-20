@@ -21,7 +21,9 @@ use App\Http\Controllers\PelangganController;
 use App\Http\Controllers\DendaController;
 
 Route::get('/', [AuthController::class, 'login'])->name('login');
-Route::post('loginsukses', [AuthController::class, 'loginsukses'])->name('loginsukses');
+Route::post('loginsukses', [AuthController::class, 'loginsukses'])
+    ->name('loginsukses')
+    ->middleware('throttle:3,1'); // 5 percobaan per menit
 Route::get('auth/lupa-password', [AuthController::class, 'lupaPassword'])->name('auth.lupa-password');
 Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword'])->name('auth.forgot-password');
 Route::middleware(['auth'])->group(function () {
@@ -63,5 +65,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/api/laporan-data', [DashboardAdminController::class, 'getLaporanData'])->name('api.laporan-data');
     // Add this to your routes/api.php file:
     Route::get('/laporan-data', [App\Http\Controllers\DashboardAdminController::class, 'getLaporanData']);
+    Route::post('/laporan/{id}/update-status-penerimaan', [LaporanController::class, 'updateStatusPenerimaan'])
+    ->name('laporan.update-status');
 
 });

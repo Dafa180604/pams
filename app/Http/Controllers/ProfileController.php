@@ -116,7 +116,7 @@ class ProfileController extends Controller
             // Simpan perubahan ke database MySQL
             $data->save();
 
-            return redirect('/profile')->with('success', 'Profil berhasil diperbarui.');
+            return redirect('/profile')->with('update', 'Profil berhasil diperbarui.');
         } catch (\Exception $e) {
             // Log error untuk debugging
             \Log::error('Update error: ' . $e->getMessage());

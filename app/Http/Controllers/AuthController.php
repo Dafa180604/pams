@@ -233,12 +233,12 @@ class AuthController extends Controller
                     'target' => $targetPhone,
                     'message' => $message,
                     'countryCode' => '62',
-                    'device' => '6287769491493', // Ganti sesuai Device ID Anda
+                    'device' => '085735326182', // Ganti sesuai Device ID Anda
                     'typing' => true,
                     'delay' => 2,
                 ),
                 CURLOPT_HTTPHEADER => array(
-                    'Authorization: y2GQtBubUi9fsNNcJfN6', // Ganti dengan token API Anda
+                    'Authorization: hzDxTTTbvEgUw8XzpMFR', // Ganti dengan token API Anda
                 ),
             ));
 

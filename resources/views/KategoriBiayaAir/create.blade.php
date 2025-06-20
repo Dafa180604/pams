@@ -33,7 +33,7 @@
                                 <div class="mb-3">
                                 <label class="form-label">Tarif</label>
                                     <input type="text" name="tarif" class="form-control"
-                                        placeholder="Masukkan Tarif">
+                                        placeholder="Masukkan Tarif" value="{{ old('tarif') }}">
                                     @error('tarif')
                                         <div class="text-danger">{{ $message }}</div>
                                     @enderror
@@ -45,7 +45,7 @@
                                 <div class="mb-3">
                                     <label class="form-label">Batas Atas</label>
                                     <input type="text" name="batas_atas" class="form-control"
-                                        placeholder="Masukkan Batas Atas">
+                                        placeholder="Masukkan Batas Atas" value="{{ old('batas_atas') }}">
                                     @error('batas_atas')
                                         <div class="text-danger">{{ $message }}</div>
                                     @enderror

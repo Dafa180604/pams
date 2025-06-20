@@ -68,193 +68,267 @@ class BelumLunasController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(string $id_transaksi)
-    {
-        // Find the transaction with related data
-        $data = Transaksi::with(['pemakaian'])->find($id_transaksi);
-        if ($data) {
-            // Calculate days since the recording date
-            $waktuCatat = new DateTime($data->pemakaian->waktu_catat);
-            $today = new DateTime();
-            $interval = $waktuCatat->diff($today);
-            $daysDifference = $interval->days;
-
-            // Only apply late fee if at least 1 day late and no fee has been applied yet
-            if ($daysDifference >= 1 && !$data->id_biaya_denda) {
-                // Find the appropriate late fee entry based on days late
-                $biayaDenda = BiayaDenda::where('jumlah_telat', $daysDifference)
-                    ->first();
-
-                // If no exact match, find the closest category
-                if (!$biayaDenda) {
-                    // Get all late fee categories
-                    $allDendaCategories = BiayaDenda::orderBy('jumlah_telat', 'asc')->get();
-
-                    // Find the appropriate category based on days difference
-                    foreach ($allDendaCategories as $category) {
-                        if ($daysDifference >= $category->jumlah_telat) {
-                            $biayaDenda = $category;
-                        } else {
-                            // Stop once we've passed the relevant threshold
-                            break;
-                        }
+public function edit(string $id_transaksi)
+{
+    // Find the transaction with related data
+    $data = Transaksi::with(['pemakaian'])->find($id_transaksi);
+    if ($data) {
+        // Calculate days since the recording date
+        $waktuCatat = new DateTime($data->pemakaian->waktu_catat);
+        $today = new DateTime();
+        $interval = $waktuCatat->diff($today);
+        $daysDifference = $interval->days;
+        
+        // Check if should apply, update, or remove late fee
+        if ($daysDifference >= 1) {
+            
+            // Find the appropriate late fee entry based on days late
+            $biayaDenda = BiayaDenda::where('jumlah_telat', $daysDifference)
+                ->first();
+            
+            // If no exact match, find the appropriate category
+            if (!$biayaDenda) {
+                // Get all late fee categories ordered by jumlah_telat descending
+                // This ensures we check from highest threshold to lowest
+                $allDendaCategories = BiayaDenda::orderBy('jumlah_telat', 'desc')->get();
+                
+                // Find the appropriate category based on days difference
+                // Use the highest threshold that the daysDifference meets or exceeds
+                foreach ($allDendaCategories as $category) {
+                    if ($daysDifference >= $category->jumlah_telat) {
+                        $biayaDenda = $category;
+                        break; // Take the first match (highest applicable threshold)
                     }
                 }
-
-                // If a matching late fee category is found
-                if ($biayaDenda) {
+            }
+            
+            // If a matching late fee category is found
+            if ($biayaDenda) {
+                // Check if we need to update the late fee
+                $needsUpdate = false;
+                
+                if (!$data->id_biaya_denda) {
+                    // No late fee applied yet
+                    $needsUpdate = true;
+                } else {
+                    // Late fee exists, check if we need to update
+                    $detailBiaya = json_decode($data->detail_biaya, true);
+                    
+                    // Update if:
+                    // 1. Days have changed (increased or decreased), OR
+                    // 2. Category has changed (different id_biaya_denda), OR
+                    // 3. No detail recorded properly
+                    if (isset($detailBiaya['denda']['jumlah_telat'])) {
+                        $savedDays = $detailBiaya['denda']['jumlah_telat'];
+                        $savedCategoryId = $detailBiaya['denda']['id'] ?? null;
+                        
+                        if ($daysDifference != $savedDays || 
+                            $biayaDenda->id_biaya_denda != $savedCategoryId) {
+                            $needsUpdate = true;
+                        }
+                    } else {
+                        // Late fee exists but no detail recorded, update it
+                        $needsUpdate = true;
+                    }
+                }
+                
+                if ($needsUpdate) {
                     // Use the direct Rupiah amount from the biaya_telat column
                     $rpDenda = $biayaDenda->biaya_telat;
-
+                    
+                    // Calculate original total (subtract old late fee if exists)
+                    $originalTotal = $data->jumlah_rp;
+                    if ($data->rp_denda) {
+                        $originalTotal -= $data->rp_denda;
+                    }
+                    
                     // Update the transaction data with late fee information
                     $data->id_biaya_denda = $biayaDenda->id_biaya_denda;
                     $data->rp_denda = $rpDenda;
-
-                    // Update the total amount to include the late fee
-                    $originalTotal = $data->jumlah_rp;
+                    
+                    // Update the total amount to include the new late fee
                     $data->jumlah_rp = $originalTotal + $rpDenda;
-
+                    
                     // Update the detail_biaya JSON to include late fee
                     $detailBiaya = json_decode($data->detail_biaya, true);
                     $detailBiaya['denda'] = [
                         'id' => $biayaDenda->id_biaya_denda,
                         'jumlah_telat' => $daysDifference, // Actual days late
+                        'kategori_telat' => $biayaDenda->jumlah_telat, // Category threshold used
                         'biaya_telat' => $rpDenda, // Direct Rupiah amount
-                        'rp_denda' => $rpDenda  // Same as biaya_telat since it's a direct amount
+                        'rp_denda' => $rpDenda,  // Same as biaya_telat since it's a direct amount
+                        'updated_at' => date('Y-m-d H:i:s') // Track when fee was last updated
                     ];
                     $data->detail_biaya = json_encode($detailBiaya);
-
+                    
                     // Save the updated transaction
                     $data->save();
-
+                    
                     // Refresh the data after updates
                     $data = Transaksi::with(['pemakaian'])->find($id_transaksi);
                 }
             }
+        } else {
+            // Not late anymore, remove late fee if exists
+            if ($data->id_biaya_denda) {
+                // Calculate original total (subtract old late fee)
+                $originalTotal = $data->jumlah_rp;
+                if ($data->rp_denda) {
+                    $originalTotal -= $data->rp_denda;
+                }
+                
+                // Remove late fee
+                $data->id_biaya_denda = null;
+                $data->rp_denda = 0;
+                $data->jumlah_rp = $originalTotal;
+                
+                // Update detail_biaya to remove late fee
+                $detailBiaya = json_decode($data->detail_biaya, true);
+                if (isset($detailBiaya['denda'])) {
+                    unset($detailBiaya['denda']);
+                }
+                $data->detail_biaya = json_encode($detailBiaya);
+                
+                // Save the updated transaction
+                $data->save();
+                
+                // Refresh the data after updates
+                $data = Transaksi::with(['pemakaian'])->find($id_transaksi);
+            }
         }
-
-        // Get petugas user data
-        $petugasUser = null;
-        if ($data && $data->pemakaian && $data->pemakaian->petugas) {
-            $petugasUser = Users::find($data->pemakaian->petugas);
-        }
-
-        return view('belumlunas.edit', compact('data', 'petugasUser'));
     }
+    
+    // Get petugas user data
+    $petugasUser = null;
+    if ($data && $data->pemakaian && $data->pemakaian->petugas) {
+        $petugasUser = Users::find($data->pemakaian->petugas);
+    }
+    
+    return view('belumlunas.edit', compact('data', 'petugasUser'));
+}
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id_transaksi)
-    {
-        $request->validate([
-            'uang_bayar' => 'required|numeric',
-        ], [
-            'uang_bayar.required' => 'Jumlah uang bayar wajib diisi!',
-            'uang_bayar.numeric' => 'Jumlah uang bayar harus berupa angka!',
+   public function update(Request $request, string $id_transaksi)
+{
+    $request->validate([
+        'uang_bayar' => 'required|numeric',
+    ], [
+        'uang_bayar.required' => 'Jumlah uang bayar wajib diisi!',
+        'uang_bayar.numeric' => 'Jumlah uang bayar harus berupa angka!',
+    ]);
+
+    try {
+        // Find the existing transaction
+        $transaksi = Transaksi::findOrFail($id_transaksi);
+
+        // Calculate kembalian
+        $kembalian = $request->uang_bayar - $transaksi->jumlah_rp;
+
+        // Update the attributes
+        $transaksi->tgl_pembayaran = now();
+        $transaksi->status_pembayaran = $request->status_pembayaran ?? 'Lunas';
+        $transaksi->uang_bayar = $request->uang_bayar;
+        $transaksi->kembalian = $kembalian;
+
+        // Save the changes to the existing record
+        $transaksi->save();
+        
+        // Ambil data pemakaian dari transaksi
+        $pemakaian = $transaksi->pemakaian;
+
+        // Cek apakah kolom petugas sudah ada isinya
+        $existingPetugas = $pemakaian->petugas ?? '';
+
+        // Ambil nama user yang sedang login
+        $namaUser = auth()->user()->id_users;
+
+        // Gabungkan nama jika belum ada dalam daftar (hindari duplikasi)
+        $daftarPetugas = collect(explode(',', $existingPetugas))
+            ->map(fn($item) => trim($item))
+            ->filter()
+            ->unique();
+
+        // Tambahkan nama user login jika belum ada
+        if (!$daftarPetugas->contains($namaUser)) {
+            $daftarPetugas->push($namaUser);
+        }
+
+        // Simpan kembali ke kolom petugas sebagai string dipisahkan koma
+        $pemakaian->petugas = $daftarPetugas->implode(',');
+
+        // Simpan perubahan
+        $pemakaian->save();
+
+        // Jika status pembayaran adalah Lunas, tambahkan ke tabel laporan
+        if ($transaksi->status_pembayaran == 'Lunas') {
+            // Dapatkan bulan dan tahun saat ini
+            $bulan = date('F'); // Nama bulan dalam bahasa Inggris
+            $tahun = date('Y');
+
+            // Ubah nama bulan ke bahasa Indonesia jika diperlukan
+            $bulanIndonesia = [
+                'January' => 'Januari',
+                'February' => 'Februari',
+                'March' => 'Maret',
+                'April' => 'April',
+                'May' => 'Mei',
+                'June' => 'Juni',
+                'July' => 'Juli',
+                'August' => 'Agustus',
+                'September' => 'September',
+                'October' => 'Oktober',
+                'November' => 'November',
+                'December' => 'Desember'
+            ];
+
+            // Get currently logged in user's name
+            $userName = auth()->user()->id_users ?? 'Unknown';
+
+            $bulanTeks = $bulanIndonesia[$bulan] ?? $bulan;
+            $keterangan = "Terima bayar {$bulanTeks} {$tahun} oleh admin {$userName}";
+
+            // Cek apakah sudah ada laporan dengan bulan dan tahun yang sama
+            $existingLaporan = Laporan::where('keterangan', $keterangan)->first();
+
+            if ($existingLaporan) {
+                // Jika sudah ada, update jumlah uang masuk
+                $existingLaporan->uang_masuk += $transaksi->jumlah_rp;
+                $existingLaporan->save();
+            } else {
+                // Jika belum ada, buat laporan baru
+                $laporan = new Laporan();
+                $laporan->tanggal = now(); // Tetap menggunakan tanggal hari ini untuk field tanggal
+                $laporan->uang_masuk = $transaksi->jumlah_rp;
+                $laporan->keterangan = $keterangan;
+                $laporan->save();
+            }
+        }
+
+        // Get updated transaction data with relationship for detail view
+        $dataTransaksi = Transaksi::with('pemakaian')->find($id_transaksi);
+        
+        // Get petugas users data
+        $petugasUsers = collect();
+        if ($dataTransaksi && $dataTransaksi->pemakaian && $dataTransaksi->pemakaian->petugas) {
+            $petugasIds = explode(',', $dataTransaksi->pemakaian->petugas);
+            $petugasUsers = Users::whereIn('id_users', $petugasIds)->get()->keyBy('id_users');
+        }
+
+        // Generate the print receipt URL
+        $cetakUrl = route('lunas.cetak', ['id_transaksi' => $id_transaksi]);
+
+        // Redirect to detail page with success message and data
+        return view('lunas.detail', compact('dataTransaksi', 'petugasUsers'))->with([
+            'pembayaran_berhasil' => 'Pembayaran berhasil diproses.',
+            'cetakUrl' => $cetakUrl
         ]);
 
-        try {
-            // Find the existing transaction
-            $transaksi = Transaksi::findOrFail($id_transaksi);
-
-            // Calculate kembalian
-            $kembalian = $request->uang_bayar - $transaksi->jumlah_rp;
-
-            // Update the attributes
-            $transaksi->tgl_pembayaran = now();
-            $transaksi->status_pembayaran = $request->status_pembayaran ?? 'Lunas';
-            $transaksi->uang_bayar = $request->uang_bayar;
-            $transaksi->kembalian = $kembalian;
-            $transaksi->pemakaian->petugas;
-
-            // Save the changes to the existing record
-            $transaksi->save();
-            // Ambil data pemakaian dari transaksi
-            $pemakaian = $transaksi->pemakaian;
-
-            // Cek apakah kolom petugas sudah ada isinya
-            $existingPetugas = $pemakaian->petugas ?? '';
-
-            // Ambil nama user yang sedang login
-            $namaUser = auth()->user()->id_users;
-
-            // Gabungkan nama jika belum ada dalam daftar (hindari duplikasi)
-            $daftarPetugas = collect(explode(',', $existingPetugas))
-                ->map(fn($item) => trim($item))
-                ->filter()
-                ->unique();
-
-            // Tambahkan nama user login jika belum ada
-            if (!$daftarPetugas->contains($namaUser)) {
-                $daftarPetugas->push($namaUser);
-            }
-
-            // Simpan kembali ke kolom petugas sebagai string dipisahkan koma
-            $pemakaian->petugas = $daftarPetugas->implode(',');
-
-            // Simpan perubahan
-            $pemakaian->save();
-
-            // Jika status pembayaran adalah Lunas, tambahkan ke tabel laporan
-            if ($transaksi->status_pembayaran == 'Lunas') {
-                // Dapatkan bulan dan tahun saat ini
-                $bulan = date('F'); // Nama bulan dalam bahasa Inggris
-                $tahun = date('Y');
-
-                // Ubah nama bulan ke bahasa Indonesia jika diperlukan
-                $bulanIndonesia = [
-                    'January' => 'Januari',
-                    'February' => 'Februari',
-                    'March' => 'Maret',
-                    'April' => 'April',
-                    'May' => 'Mei',
-                    'June' => 'Juni',
-                    'July' => 'Juli',
-                    'August' => 'Agustus',
-                    'September' => 'September',
-                    'October' => 'Oktober',
-                    'November' => 'November',
-                    'December' => 'Desember'
-                ];
-
-                // Get currently logged in user's name
-                $userName = auth()->user()->id_users ?? 'Unknown';
-
-                $bulanTeks = $bulanIndonesia[$bulan] ?? $bulan;
-                $keterangan = "Terima bayar {$bulanTeks} {$tahun} oleh admin {$userName}";
-
-                // Cek apakah sudah ada laporan dengan bulan dan tahun yang sama
-                $existingLaporan = Laporan::where('keterangan', $keterangan)->first();
-
-                if ($existingLaporan) {
-                    // Jika sudah ada, update jumlah uang masuk
-                    $existingLaporan->uang_masuk += $transaksi->jumlah_rp;
-                    $existingLaporan->save();
-                } else {
-                    // Jika belum ada, buat laporan baru
-                    $laporan = new Laporan();
-                    $laporan->tanggal = now(); // Tetap menggunakan tanggal hari ini untuk field tanggal
-                    $laporan->uang_masuk = $transaksi->jumlah_rp;
-                    $laporan->keterangan = $keterangan;
-                    $laporan->save();
-                }
-            }
-
-            // Fetch the transaction data for the receipt view
-            // Generate the print receipt URL
-            $cetakUrl = route('lunas.cetak', ['id_transaksi' => $id_transaksi]);
-
-            // Redirect to index with success message and JavaScript to open receipt in new tab
-            return redirect()->route('lunas.index')->with([
-                'pembayaran_berhasil' => 'Pembayaran berhasil diproses.',
-                'cetakUrl' => $cetakUrl
-            ]);
-
-        } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
-        }
+    } catch (\Exception $e) {
+        return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
     }
+}
     /**
      * Remove the specified resource from storage.
      */

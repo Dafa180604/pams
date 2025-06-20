@@ -2,10 +2,9 @@
 @section('title', 'Biaya Denda')
 @section('content')
     <div class="page-content">
-
         <nav class="page-breadcrumb">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('BiayaDenda.index') }}">Data Master Kategori Biaya
+                <li class="breadcrumb-item"><a href="{{ route('BiayaDenda.index') }}">Data Master Biaya Denda
                         Air</a></li>
                 <li class="breadcrumb-item active" aria-current="page">Tambah</li>
             </ol>
@@ -23,7 +22,7 @@
                                     <div class="mb-3">
                                         <label class="form-label">Jumlah Telat</label>
                                         <input type="text" name="jumlah_telat" class="form-control"
-                                            placeholder="Masukkan Jumlah Telat">
+                                            placeholder="Masukkan Jumlah Telat" value="{{ old('jumlah_telat') }}">
                                         @error('jumlah_telat')
                                             <div class="text-danger">{{ $message }}</div>
                                         @enderror
@@ -33,7 +32,7 @@
                                     <div class="mb-3">
                                         <label class="form-label">Biaya Telat (Rp)</label>
                                         <input type="text" name="biaya_telat" class="form-control"
-                                            placeholder="Masukkan Biaya Telat (Rp)">
+                                            placeholder="Masukkan Biaya Telat (Rp)" value="{{ old('biaya_telat') }}">
                                         @error('biaya_telat')
                                             <div class="text-danger">{{ $message }}</div>
                                         @enderror
@@ -51,7 +50,7 @@
                             <small class="text-muted d-block">
                                 <strong>Data Saat Ini:</strong> Jumlah Telat Maksimal:
                                 <strong>{{ $maxJumlahTelat ?? 0 }}</strong> hari, Biaya Telat Maksimal:
-                                <strong>Rp.{{ $maxBiayaTelat ?? 0 }}</strong>
+                                <strong>Rp.{{ number_format($maxBiayaTelat ?? 0, 0, ',', '.') }}</strong>
                             </small>
                         </div>
                     </div>

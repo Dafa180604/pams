@@ -39,7 +39,8 @@ Route::middleware('auth:sanctum')->group(function () {
 //Route Api Auth
 Route::prefix('auth')->group(function () {
     // Login Route
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/login', [AuthController::class, 'login'])
+        ->middleware('throttle:3,1');
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 }); 
 
