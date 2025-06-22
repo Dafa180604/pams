@@ -215,8 +215,8 @@
             
             // Buat template HTML untuk Word
             const wordTemplate = `
-            <html xmlns:o="urn:schemas-microsoft-com:office:office" 
-                  xmlns:w="urn:schemas-microsoft-com:office:word" 
+            <html xmlns:o="urn:schemas-microsoft-com:office:office"
+                  xmlns:w="urn:schemas-microsoft-com:office:word"
                   xmlns="http://www.w3.org/TR/REC-html40">
             <head>
                 <meta charset="utf-8">
@@ -224,29 +224,87 @@
                 <style>
                     @page {
                         size: 21cm 29.7cm;  /* A4 */
-                        margin: 2cm;
+                        margin: 1.5cm;
                     }
-                    body { font-family: 'Arial', sans-serif; }
-                    h3 { text-align: center; margin-bottom: 10px; }
-                    p { text-align: center; margin-bottom: 20px; }
-                    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-                    th, td { border: 1px solid #000; padding: 8px; text-align: left; }
-                    th { background-color: #f2f2f2; font-weight: bold; text-align: center; }
-                    .table-secondary { background-color: #e2e3e5; }
-                    td:nth-child(1) { text-align: center; } /* NO column */
-                    td:nth-child(3), td:nth-child(4), td:nth-child(5) { text-align: right; } /* Money columns */
+                    body { 
+                        font-family: 'Arial', sans-serif; 
+                        font-size: 11px;
+                        margin: 0;
+                        padding: 0;
+                    }
+                    h3 { 
+                        text-align: center; 
+                        margin: 5px 0;
+                        font-size: 14px;
+                        font-weight: bold;
+                    }
+                    p { 
+                        text-align: center; 
+                        margin: 10px 0 15px 0;
+                        font-size: 12px;
+                    }
+                    table { 
+                        width: 100%; 
+                        border-collapse: collapse; 
+                        margin-bottom: 20px;
+                        font-size: 10px;
+                    }
+                    th, td { 
+                        border: 1px solid #000; 
+                        padding: 4px 6px; 
+                        vertical-align: middle;
+                    }
+                    th { 
+                        background-color: #f2f2f2; 
+                        font-weight: bold; 
+                        text-align: center;
+                        font-size: 10px;
+                    }
+                    .table-secondary { 
+                        background-color: #e2e3e5; 
+                        font-weight: bold;
+                    }
+                    
+                    /* Column widths */
+                    th:nth-child(1), td:nth-child(1) { width: 35%; } /* URAIAN */
+                    th:nth-child(2), td:nth-child(2) { width: 18%; } /* DEBET */
+                    th:nth-child(3), td:nth-child(3) { width: 18%; } /* KREDET */
+                    th:nth-child(4), td:nth-child(4) { width: 18%; } /* SALDO */
+                    
+                    /* Text alignment */
+                    td:nth-child(1) { text-align: left; padding-left: 8px; } /* URAIAN column */
+                    td:nth-child(2), td:nth-child(3), td:nth-child(4) { 
+                        text-align: right; 
+                        padding-right: 8px;
+                        font-family: 'Courier New', monospace; /* Better for numbers */
+                    }
+                    
+                    /* Special styling for summary rows */
+                    .summary-row {
+                        font-weight: bold;
+                        background-color: #f8f9fa;
+                    }
+                    
+                    /* Better number formatting */
+                    .number {
+                        white-space: nowrap;
+                    }
                 </style>
                 <!--[if gte mso 9]>
                 <xml>
                     <w:WordDocument>
                         <w:View>Print</w:View>
                         <w:Zoom>100</w:Zoom>
+                        <w:DoNotPromptForConvert/>
+                        <w:DoNotShowRevisions/>
+                        <w:DoNotShowInsertionsAndDeletions/>
+                        <w:DoNotShowPropertyChanges/>
                     </w:WordDocument>
                 </xml>
                 <![endif]-->
             </head>
             <body>
-                <div style="text-align: center; line-height: 1.2;">
+                <div style="text-align: center; line-height: 1.2; margin-bottom: 20px;">
                     <h3 style="margin: 0;">LAPORAN PERTANGGUNG JAWABAN</h3>
                     <h3 style="margin: 0;">KPS-PAMS DESA TENGGERLOR</h3>
                 </div>
