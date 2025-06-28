@@ -151,180 +151,386 @@
             </div>
         </div>
     </div>
-
+    <script>
+        // Mengirimkan data lengkap dari controller Laravel ke JavaScript
+        const dataLaporanFromServer = @json($dataLaporan);
+        const previousSaldoFromServer = {{ $previousSaldo ?? 0 }};
+    </script>
     <script>
         // Format tanggal untuk judul laporan
-        function formatDateToMonthYear(dateStr) {
-            const bulan = [
-                'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-                'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-            ];
-            const date = new Date(dateStr);
-            return {
-                monthYear: `${bulan[date.getMonth()]} ${date.getFullYear()}`,
-                month: date.getMonth(),
-                year: date.getFullYear()
-            };
-        }
+        // Format tanggal untuk judul laporan
+// Fungsi untuk format tanggal Indonesia
+function formatDateToIndonesian(dateStr) {
+    const bulan = [
+        'JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI',
+        'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'
+    ];
+    const date = new Date(dateStr + '-01');
+    return {
+        monthYear: `${bulan[date.getMonth()]} ${date.getFullYear()}`,
+        month: date.getMonth(),
+        year: date.getFullYear(),
+        monthName: bulan[date.getMonth()]
+    };
+}
 
-        // Fungsi untuk mendapatkan teks periode laporan
-        function getPeriodeText() {
-            const startDate = document.getElementById('start_date').value;
-            const endDate = document.getElementById('end_date').value;
-            
-            const start = formatDateToMonthYear(startDate);
-            const end = formatDateToMonthYear(endDate);
+// Fungsi untuk mendapatkan data laporan yang dikelompokkan per bulan
+// Fungsi untuk mendapatkan data laporan yang dikelompokkan per bulan (VERSI BARU YANG LEBIH BAIK)
+function getDataPerBulan() {
+    const startDate = document.getElementById('start_date').value;
+    const endDate = document.getElementById('end_date').value;
+    
+    const dataPerBulan = {};
+    let saldoAwalBulan = previousSaldoFromServer; // Gunakan saldo dari server
 
-            // Jika bulan dan tahun sama, tampilkan satu saja
-            return (start.month === end.month && start.year === end.year)
-                ? `${start.monthYear}`
-                : `${start.monthYear} - ${end.monthYear}`;
-        }
+    // 1. Inisialisasi semua bulan dalam rentang yang dipilih
+    const startMonth = new Date(startDate + '-01');
+    const endMonth = new Date(endDate + '-01');
+    let currentMonth = new Date(startMonth);
 
-        // Export to Word function
-        function exportToWord() {
-            const periodeText = getPeriodeText();
-            
-            // Clone table and clean up for export
-            const originalTable = document.getElementById('report-table');
-            const clonedTable = originalTable.cloneNode(true);
-            
-            // Clean up keterangan cells - remove action buttons and clean status badges for export
-            const rows = clonedTable.querySelectorAll('tbody tr');
-            rows.forEach(row => {
-                const cells = row.querySelectorAll('td');
-                if (cells.length > 1) {
-                    const keteranganCell = cells[1];
-                    const keteranganContent = keteranganCell.querySelector('.keterangan-content');
-                    
-                    if (keteranganContent) {
-                        // Ambil hanya teks utama keterangan tanpa status dan tombol aksi
-                        const mainKeterangan = keteranganContent.querySelector('.main-keterangan');
-                        if (mainKeterangan) {
-                            keteranganCell.innerHTML = mainKeterangan.textContent;
-                        }
-                    }
-                    
-                    // Fallback: hapus semua badge dan button jika masih ada
-                    const actionsToRemove = keteranganCell.querySelectorAll('.badge, .status-section, .btn-group, .no-print');
-                    actionsToRemove.forEach(element => {
-                        element.remove();
-                    });
-                }
+    while (currentMonth <= endMonth) {
+        const monthKey = currentMonth.toISOString().slice(0, 7); // Format: YYYY-MM
+        dataPerBulan[monthKey] = {
+            data: [],
+            totalDebit: 0,
+            totalKredit: 0,
+            saldoAwal: 0, // Akan diisi nanti
+            saldoAkhir: 0
+        };
+        currentMonth.setMonth(currentMonth.getMonth() + 1);
+    }
+
+    // 2. Proses data dari server dan kelompokkan ke bulan yang sesuai
+    let runningSaldo = previousSaldoFromServer;
+
+    dataLaporanFromServer.forEach(item => {
+        // Asumsi kolom tanggal bernama 'tanggal'. Jika namanya lain (misal: 'created_at'), sesuaikan di sini.
+        const transaksiTanggal = new Date(item.tanggal);
+        const bulanKey = transaksiTanggal.toISOString().slice(0, 7); // Format: YYYY-MM
+
+        // Pastikan transaksi berada dalam rentang bulan yang dipilih
+        if (dataPerBulan[bulanKey]) {
+            runningSaldo += (item.uang_masuk || 0) - (item.uang_keluar || 0);
+
+            dataPerBulan[bulanKey].data.push({
+                no: dataPerBulan[bulanKey].data.length + 1,
+                // PERBAIKAN: Sertakan tanggal di sini
+                tanggal: item.tanggal, 
+                keterangan: item.keterangan,
+                debit: item.uang_masuk || 0,
+                kredit: item.uang_keluar || 0,
+                saldo: runningSaldo
             });
-            
-            // Buat template HTML untuk Word
-            const wordTemplate = `
-            <html xmlns:o="urn:schemas-microsoft-com:office:office"
-                  xmlns:w="urn:schemas-microsoft-com:office:word"
-                  xmlns="http://www.w3.org/TR/REC-html40">
-            <head>
-                <meta charset="utf-8">
-                <title>LAPORAN PERTANGGUNG JAWABAN PKS-PAMS DESA TENGGERLOR</title>
-                <style>
-                    @page {
-                        size: 21cm 29.7cm;  /* A4 */
-                        margin: 1.5cm;
-                    }
-                    body { 
-                        font-family: 'Arial', sans-serif; 
-                        font-size: 11px;
-                        margin: 0;
-                        padding: 0;
-                    }
-                    h3 { 
-                        text-align: center; 
-                        margin: 5px 0;
-                        font-size: 14px;
-                        font-weight: bold;
-                    }
-                    p { 
-                        text-align: center; 
-                        margin: 10px 0 15px 0;
-                        font-size: 12px;
-                    }
-                    table { 
-                        width: 100%; 
-                        border-collapse: collapse; 
-                        margin-bottom: 20px;
-                        font-size: 10px;
-                    }
-                    th, td { 
-                        border: 1px solid #000; 
-                        padding: 4px 6px; 
-                        vertical-align: middle;
-                    }
-                    th { 
-                        background-color: #f2f2f2; 
-                        font-weight: bold; 
-                        text-align: center;
-                        font-size: 10px;
-                    }
-                    .table-secondary { 
-                        background-color: #e2e3e5; 
-                        font-weight: bold;
-                    }
-                    
-                    /* Column widths */
-                    th:nth-child(1), td:nth-child(1) { width: 35%; } /* URAIAN */
-                    th:nth-child(2), td:nth-child(2) { width: 18%; } /* DEBET */
-                    th:nth-child(3), td:nth-child(3) { width: 18%; } /* KREDET */
-                    th:nth-child(4), td:nth-child(4) { width: 18%; } /* SALDO */
-                    
-                    /* Text alignment */
-                    td:nth-child(1) { text-align: left; padding-left: 8px; } /* URAIAN column */
-                    td:nth-child(2), td:nth-child(3), td:nth-child(4) { 
-                        text-align: right; 
-                        padding-right: 8px;
-                        font-family: 'Courier New', monospace; /* Better for numbers */
-                    }
-                    
-                    /* Special styling for summary rows */
-                    .summary-row {
-                        font-weight: bold;
-                        background-color: #f8f9fa;
-                    }
-                    
-                    /* Better number formatting */
-                    .number {
-                        white-space: nowrap;
-                    }
-                </style>
-                <!--[if gte mso 9]>
-                <xml>
-                    <w:WordDocument>
-                        <w:View>Print</w:View>
-                        <w:Zoom>100</w:Zoom>
-                        <w:DoNotPromptForConvert/>
-                        <w:DoNotShowRevisions/>
-                        <w:DoNotShowInsertionsAndDeletions/>
-                        <w:DoNotShowPropertyChanges/>
-                    </w:WordDocument>
-                </xml>
-                <![endif]-->
-            </head>
-            <body>
-                <div style="text-align: center; line-height: 1.2; margin-bottom: 20px;">
-                    <h3 style="margin: 0;">LAPORAN PERTANGGUNG JAWABAN</h3>
-                    <h3 style="margin: 0;">KPS-PAMS DESA TENGGERLOR</h3>
-                </div>
-                <p>Periode: ${periodeText}</p>
-                ${clonedTable.outerHTML}
-            </body>
-            </html>
-            `;
 
-            // Buat Blob dan href untuk download
-            const blob = new Blob([wordTemplate], { type: 'application/msword' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `Laporan_KPS_PAMS_${periodeText.replace(/\s/g, '_')}.doc`;
-            
-            // Klik link secara programatis untuk memicu download
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            dataPerBulan[bulanKey].totalDebit += (item.uang_masuk || 0);
+            dataPerBulan[bulanKey].totalKredit += (item.uang_keluar || 0);
         }
+    });
+
+    // 3. Hitung saldo awal dan akhir untuk setiap bulan
+    const sortedMonths = Object.keys(dataPerBulan).sort();
+
+    sortedMonths.forEach((bulanKey, index) => {
+        if (index === 0) {
+            // Bulan pertama menggunakan saldo awal dari server
+            dataPerBulan[bulanKey].saldoAwal = previousSaldoFromServer;
+        } else {
+            // Bulan berikutnya menggunakan saldo akhir dari bulan sebelumnya
+            const prevMonthKey = sortedMonths[index - 1];
+            dataPerBulan[bulanKey].saldoAwal = dataPerBulan[prevMonthKey].saldoAkhir;
+        }
+
+        // Saldo akhir adalah saldo awal ditambah total debit dikurangi total kredit bulan ini
+        const saldoAkhirBulan = dataPerBulan[bulanKey].saldoAwal + dataPerBulan[bulanKey].totalDebit - dataPerBulan[bulanKey].totalKredit;
+        dataPerBulan[bulanKey].saldoAkhir = saldoAkhirBulan;
+    });
+
+    return dataPerBulan;
+}
+
+// SOLUSI ALTERNATIF: Fungsi yang menggunakan data dari server
+function getDataPerBulanFromServer() {
+    const startDate = document.getElementById('start_date').value;
+    const endDate = document.getElementById('end_date').value;
+    
+    // Ambil data dari server dengan AJAX
+    return fetch(`/laporan/get-data-per-bulan?start_date=${startDate}&end_date=${endDate}`, {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        return data;
+    })
+    .catch(error => {
+        console.error('Error fetching data:', error);
+        // Fallback ke metode lama jika gagal
+        return getDataPerBulan();
+    });
+}
+
+
+// Fungsi untuk membuat tabel HTML per bulan
+function createMonthTable(bulanKey, data, bulanInfo) {
+    let tableHTML = `
+    <div style="margin-bottom: 40px;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 5px;">
+            <tr>
+                <td colspan="6" style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold; background-color: #e9ecef;">
+                    BULAN ${bulanInfo.monthName} ${bulanInfo.year}
+                </td>
+            </tr>
+        </table>
+        
+        <table style="width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 0;">
+            <thead>
+                <tr style="background-color: #f2f2f2;">
+                    <td style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold; width: 8%;">Tgl</td>
+                    <td style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold; width: 5%;">No</td>
+                    <td style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold; width: 42%;">U R A I A N</td>
+                    <td style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold; width: 15%;">DEBET</td>
+                    <td style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold; width: 15%;">KREDIT</td>
+                    <td style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold; width: 15%;">SALDO</td>
+                </tr>
+            </thead>
+        </table>
+        
+        <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+            <tbody>`;
+    
+    // Saldo bulan lalu jika ada yang perlu ditampilkan
+    if (data.saldoAwal !== 0) {
+        tableHTML += `
+                <tr style="background-color: #f8f9fa;">
+                    <td style="border: 1px solid #000; padding: 6px; text-align: center; width: 8%;">-</td>
+                    <td style="border: 1px solid #000; padding: 6px; text-align: center; width: 5%;">-</td>
+                    <td style="border: 1px solid #000; padding: 6px; width: 42%;"><strong>SALDO BULAN LALU</strong></td>
+                    <td style="border: 1px solid #000; padding: 6px; text-align: right; width: 15%;">-</td>
+                    <td style="border: 1px solid #000; padding: 6px; text-align: right; width: 15%;">-</td>
+                    <td style="border: 1px solid #000; padding: 6px; text-align: right; font-weight: bold; width: 15%;">${new Intl.NumberFormat('id-ID').format(data.saldoAwal)}</td>
+                </tr>`;
+    }
+    
+    // Data transaksi
+    data.data.forEach((item) => {
+        // Bersihkan keterangan dari status penerimaan
+        let cleanKeterangan = item.keterangan.replace(/, (diterima|belum diterima)/gi, '').replace(/\s*(Diterima|Belum Diterima)\s*/gi, '');
+        
+        // --- INILAH PERBAIKAN UTAMANYA ---
+        // Ambil hanya angka hari dari string tanggal (misal: dari "2024-05-15" menjadi "15")
+        const tanggalHari = item.tanggal ? new Date(item.tanggal).getDate() : '-';
+        
+        tableHTML += `
+                <tr>
+                    <td style="border: 1px solid #000; padding: 6px; text-align: center; width: 8%;">${tanggalHari}</td>
+                    <td style="border: 1px solid #000; padding: 6px; text-align: center; width: 5%;">${item.no}</td>
+                    <td style="border: 1px solid #000; padding: 6px; width: 42%;">${cleanKeterangan}</td>
+                    <td style="border: 1px solid #000; padding: 6px; text-align: right; width: 15%;">${item.debit > 0 ? new Intl.NumberFormat('id-ID').format(item.debit) : '-'}</td>
+                    <td style="border: 1px solid #000; padding: 6px; text-align: right; width: 15%;">${item.kredit > 0 ? new Intl.NumberFormat('id-ID').format(item.kredit) : '-'}</td>
+                    <td style="border: 1px solid #000; padding: 6px; text-align: right; width: 15%;">${new Intl.NumberFormat('id-ID').format(item.saldo)}</td>
+                </tr>`;
+    });
+    
+    tableHTML += `
+            </tbody>
+        </table>
+        
+        <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+            <tr style="background-color: #f8f9fa; font-weight: bold;">
+                <td colspan="3" style="border: 1px solid #000; padding: 8px; text-align: center; width: 55%;"><strong>J U M L A H</strong></td>
+                <td style="border: 1px solid #000; padding: 8px; text-align: right; width: 15%;"><strong>${new Intl.NumberFormat('id-ID').format(data.totalDebit)}</strong></td>
+                <td style="border: 1px solid #000; padding: 8px; text-align: right; width: 15%;"><strong>${new Intl.NumberFormat('id-ID').format(data.totalKredit)}</strong></td>
+                <td style="border: 1px solid #000; padding: 8px; text-align: right; width: 15%;"><strong>${new Intl.NumberFormat('id-ID').format(data.saldoAkhir)}</strong></td>
+            </tr>
+        </table>
+    </div>`;
+    
+    return tableHTML;
+}
+function countPasangBaru(dataLaporan) {
+    let count = 0;
+    const pasangRegex = /^biaya pasang/i; // Hanya yang diawali dengan "biaya pasang"
+    
+    dataLaporan.forEach(item => {
+        if (pasangRegex.test(item.keterangan)) {
+            count++;
+        }
+    });
+    return count;
+}
+
+// Fungsi export to Word yang diperbaiki
+function exportToWord() {
+    const jumlahPasangBaru = countPasangBaru(dataLaporanFromServer);
+    const startDate = document.getElementById('start_date').value;
+    const endDate = document.getElementById('end_date').value;
+    
+    const start = formatDateToIndonesian(startDate);
+    const end = formatDateToIndonesian(endDate);
+    
+    // Tentukan periode text
+    const periodeText = (start.month === end.month && start.year === end.year)
+        ? `${start.monthYear}`
+        : `${start.monthYear} - ${end.monthYear}`;
+    
+    // Dapatkan data per bulan
+    const dataPerBulan = getDataPerBulan();
+    const sortedBulan = Object.keys(dataPerBulan).sort();
+    
+    // Buat tabel untuk setiap bulan
+    let tablesHTML = '';
+    sortedBulan.forEach(bulanKey => {
+        const bulanInfo = formatDateToIndonesian(bulanKey);
+        tablesHTML += createMonthTable(bulanKey, dataPerBulan[bulanKey], bulanInfo);
+    });
+    
+    // Hitung saldo akhir untuk catatan
+    const lastMonth = sortedBulan[sortedBulan.length - 1];
+    const saldoAkhir = dataPerBulan[lastMonth]?.saldoAkhir || 0;
+    
+    // Template Word yang diperbaiki
+    const wordTemplate = `
+    <html xmlns:o="urn:schemas-microsoft-com:office:office"
+          xmlns:w="urn:schemas-microsoft-com:office:word"
+          xmlns="http://www.w3.org/TR/REC-html40">
+    <head>
+        <meta charset="utf-8">
+        <title>LAPORAN PERTANGGUNG JAWABAN KPS-PAMS DESA TENGGERLOR</title>
+        <style>
+            @page {
+                size: 21cm 29.7cm;
+                margin: 2cm 1.5cm;
+            }
+            body { 
+                font-family: 'Arial', sans-serif; 
+                font-size: 11px;
+                margin: 0;
+                padding: 0;
+                line-height: 1.2;
+            }
+            .header {
+                text-align: center;
+                margin-bottom: 20px;
+            }
+            .header h3 { 
+                margin: 2px 0;
+                font-size: 14px;
+                font-weight: bold;
+            }
+            .periode {
+                text-align: center;
+                margin: 15px 0 20px 0;
+                font-size: 12px;
+                font-weight: bold;
+            }
+            table { 
+                width: 100%; 
+                border-collapse: collapse; 
+                margin-bottom: 20px;
+                font-size: 10px;
+            }
+            th, td { 
+                border: 1px solid #000; 
+                padding: 4px 6px; 
+                vertical-align: middle;
+            }
+            .notes {
+                margin-top: 20px;
+                font-size: 10px;
+                line-height: 1.4;
+            }
+            .signature-table {
+                margin-top: 40px;
+                width: 100%;
+                border-collapse: collapse;
+            }
+            .signature-table td {
+                border: 1px solid #fff; /* Border putih/transparan */
+                padding: 15px;
+                text-align: center;
+                vertical-align: top;
+                width: 50%;
+            }
+            .signature-box {
+                margin-top: 15px;
+                height: 80px;
+                margin-bottom: 10px;
+            }
+            .signature-name {
+                font-weight: bold;
+                text-decoration: underline;
+                margin-top: 5px;
+            }
+        </style>
+        <!--[if gte mso 9]>
+        <xml>
+            <w:WordDocument>
+                <w:View>Print</w:View>
+                <w:Zoom>100</w:Zoom>
+                <w:DoNotPromptForConvert/>
+                <w:DoNotShowRevisions/>
+                <w:DoNotShowInsertionsAndDeletions/>
+                <w:DoNotShowPropertyChanges/>
+            </w:WordDocument>
+        </xml>
+        <![endif]-->
+    </head>
+    <body>
+        <div class="header">
+            <h3>LAPORAN PERTANGGUNG JAWABAN</h3>
+            <h3>KPS-PAMS DESA TENGGERLOR</h3>
+        </div>
+        
+        <div class="periode">Periode: ${periodeText}</div>
+        
+        ${tablesHTML}
+        
+        <div class="notes">
+            <p><strong>NB:</strong></p>
+            <p>1. Saldo akhir ${end.monthName} adalah profit bersih di tahun ${end.year}</p>
+            <p>2. Profit bersih tersebut telah diserahkan pada Bendahara Bumdes secara <strong>TUNAI (${new Intl.NumberFormat('id-ID').format(saldoAkhir)})</strong></p>
+            <p>3. Jumlah pasang baru periode ini: ${jumlahPasangBaru} pelanggan</p>
+        </div>
+        
+        <table class="signature-table">
+            <tr>
+                <td>
+                </td>
+                <td><p>Tenggerlor,___${end.monthName} ${end.year}</p>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <p>Ketua KPS PAMS</p>
+                    <div class="signature-box"></div>
+                    <br><br>
+                    <p class="signature-name">KASTUBI</p>
+                </td>
+                <td>                    
+                    <p>Bendahara KPS PAMS</p>
+                    <div class="signature-box"></div>
+                    <br><br>
+                    <p class="signature-name">ABDUL SHOLI</p>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+    `;
+
+    // Buat Blob dan download
+    const blob = new Blob([wordTemplate], { type: 'application/msword' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Laporan_KPS_PAMS_${periodeText.replace(/\s/g, '_').replace(/-/g, '_')}.doc`;
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
 
         // Function to update status penerimaan
         function updateStatus(id, status) {
