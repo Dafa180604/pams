@@ -106,9 +106,9 @@
                                                         </td>
                                                     </tr>
                                                 @endforeach
-                                                <tr>
+                                                <tr id="denda-row">
                                                     <th class="text-muted">Denda</th>
-                                                    <td class="text-end">
+                                                    <td class="text-end" id="denda-amount">
                                                         @php
                                                             $denda = $detailBiaya['denda'] ?? null;
                                                             $dendaAmount = $denda ? $denda['rp_denda'] : 0;
@@ -119,7 +119,7 @@
                                                 <!-- Tampilkan total tagihan -->
                                                 <tr class="bg-light">
                                                     <th class="fw-bold fs-5">TOTAL TAGIHAN</th>
-                                                    <td class="text-end fw-bold fs-5 text-black">Rp
+                                                    <td class="text-end fw-bold fs-5 text-black" id="total-tagihan">Rp
                                                         {{ number_format($totalTagihan, 0, ',', '.') }}
                                                     </td>
                                                 </tr>
@@ -130,6 +130,19 @@
                             </div>
                         </div>
 
+                        @if(isset($detailBiaya['denda']) && $detailBiaya['denda']['rp_denda'] > 0)
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="pemulihan_denda" name="pemulihan_denda"
+                                        value="1" style="transform: scale(1.2);">
+                                    <label class="form-check-label fw-semibold text-success ms-2" for="pemulihan_denda">
+                                        <i class="mdi mdi-gift me-1"></i>Berikan Pemulihan/Pengampunan Denda
+                                        <small class="text-muted d-block">Denda sebesar Rp {{ number_format($detailBiaya['denda']['rp_denda'], 0, ',', '.') }} akan diampuni</small>
+                                    </label>
+                                </div>
+                            </div>
+                        @endif
+
                         <form action="{{ route('belumlunas.update', $data->id_transaksi) }}" method="POST" class="mt-4"
                             id="paymentForm">
                             @csrf
@@ -137,6 +150,7 @@
 
                             <input type="hidden" name="pencatatan" value="">
                             <input type="hidden" id="jumlah_rp" name="jumlah_rp" value="{{ $data->jumlah_rp }}">
+                            <input type="hidden" id="pemulihan_denda_input" name="pemulihan_denda" value="0">
 
                             <div class="card border-0 shadow-sm mb-4">
                                 <div class="card-header bg-indigo-600 text-white" style="background-color: #6366f1;">
@@ -195,16 +209,82 @@
             </div>
         </div>
     </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const uangBayarInput = document.getElementById('uang_bayar');
             const jumlahRpInput = document.getElementById('jumlah_rp');
             const kembalianInput = document.getElementById('kembalian');
             const btnSubmit = document.getElementById('btnSubmit');
+            const pemulihanCheckbox = document.getElementById('pemulihan_denda');
+            const pemulihanInput = document.getElementById('pemulihan_denda_input');
+            const totalTagihanElement = document.getElementById('total-tagihan');
+            const dendaRowElement = document.getElementById('denda-row');
+            const dendaAmountElement = document.getElementById('denda-amount');
 
             // Format number as currency
             function formatCurrency(number) {
                 return new Intl.NumberFormat('id-ID').format(number);
+            }
+
+            // Ambil nilai asli dari server
+            let originalTotal = parseFloat(jumlahRpInput.value) || 0;
+            let dendaAmount = 0;
+            let currentTotal = originalTotal;
+
+            // Ambil nilai denda dari detail biaya jika ada
+            @if(isset($detailBiaya['denda']) && $detailBiaya['denda']['rp_denda'] > 0)
+                dendaAmount = {{ $detailBiaya['denda']['rp_denda'] }};
+            @endif
+
+            // Handle pemulihan denda checkbox
+            if (pemulihanCheckbox) {
+                pemulihanCheckbox.addEventListener('change', function () {
+                    if (this.checked) {
+                        // PENGAMPUNAN: Hitung total tanpa denda (pastikan tidak negatif)
+                        currentTotal = Math.max(0, originalTotal - dendaAmount);
+                        
+                        // Update input hidden
+                        jumlahRpInput.value = currentTotal;
+                        pemulihanInput.value = '1';
+
+                        // Update tampilan denda menjadi Rp 0 dengan strikethrough
+                        dendaAmountElement.innerHTML = 
+                            '<span style="text-decoration: line-through; color: #dc3545;">Rp ' + formatCurrency(dendaAmount) + '</span> ' +
+                            '<span class="text-success fw-bold">Rp 0 (Diampuni)</span>';
+
+                        // Update tampilan total tagihan
+                        totalTagihanElement.innerHTML = 
+                            'Rp ' + formatCurrency(currentTotal) + 
+                            ' <small class="text-success fw-bold d-block"><i class="mdi mdi-gift me-1"></i>Denda Rp ' + 
+                            formatCurrency(dendaAmount) + ' diampuni</small>';
+
+                        // Tambahkan class untuk highlight
+                        dendaRowElement.classList.add('table-success');
+
+                    } else {
+                        // BATALKAN PENGAMPUNAN: Kembalikan ke total asli
+                        currentTotal = originalTotal;
+                        
+                        // Update input hidden
+                        jumlahRpInput.value = currentTotal;
+                        pemulihanInput.value = '0';
+
+                        // Kembalikan tampilan denda normal
+                        dendaAmountElement.innerHTML = 'Rp ' + formatCurrency(dendaAmount);
+
+                        // Kembalikan tampilan total tagihan normal
+                        totalTagihanElement.innerHTML = 'Rp ' + formatCurrency(currentTotal);
+
+                        // Hapus class highlight
+                        dendaRowElement.classList.remove('table-success');
+                    }
+
+                    // Reset input uang bayar untuk kalkulasi ulang
+                    uangBayarInput.value = '';
+                    kembalianInput.value = '';
+                    btnSubmit.disabled = true;
+                });
             }
 
             // Calculate and display kembalian when uang_bayar changes
@@ -213,12 +293,33 @@
                 const jumlahRp = parseFloat(jumlahRpInput.value) || 0;
                 const kembalian = uangBayar - jumlahRp;
 
-                if (kembalian >= 0) {
+                if (uangBayar >= jumlahRp && uangBayar > 0) {
                     kembalianInput.value = 'Rp ' + formatCurrency(kembalian);
+                    kembalianInput.classList.remove('text-danger');
+                    kembalianInput.classList.add('text-success');
                     btnSubmit.disabled = false;
-                } else {
-                    kembalianInput.value = 'Pembayaran kurang';
+                } else if (uangBayar > 0 && uangBayar < jumlahRp) {
+                    const kurang = jumlahRp - uangBayar;
+                    kembalianInput.value = 'Kurang Rp ' + formatCurrency(kurang);
+                    kembalianInput.classList.remove('text-success');
+                    kembalianInput.classList.add('text-danger');
                     btnSubmit.disabled = true;
+                } else {
+                    kembalianInput.value = '';
+                    kembalianInput.classList.remove('text-success', 'text-danger');
+                    btnSubmit.disabled = true;
+                }
+            });
+
+            // Validasi form sebelum submit
+            document.getElementById('paymentForm').addEventListener('submit', function(e) {
+                const uangBayar = parseFloat(uangBayarInput.value) || 0;
+                const jumlahRp = parseFloat(jumlahRpInput.value) || 0;
+
+                if (uangBayar < jumlahRp) {
+                    e.preventDefault();
+                    alert('Uang bayar tidak mencukupi!');
+                    return false;
                 }
             });
         });

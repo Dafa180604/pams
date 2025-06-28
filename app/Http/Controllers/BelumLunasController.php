@@ -210,7 +210,7 @@ public function edit(string $id_transaksi)
     /**
      * Update the specified resource in storage.
      */
-   public function update(Request $request, string $id_transaksi)
+    public function update(Request $request, string $id_transaksi)
 {
     $request->validate([
         'uang_bayar' => 'required|numeric',
@@ -223,14 +223,48 @@ public function edit(string $id_transaksi)
         // Find the existing transaction
         $transaksi = Transaksi::findOrFail($id_transaksi);
 
-        // Calculate kembalian
-        $kembalian = $request->uang_bayar - $transaksi->jumlah_rp;
+        // Decode detail_biaya untuk mendapatkan informasi denda
+        $detailBiaya = json_decode($transaksi->detail_biaya ?? '{}', true);
+        $dendaAmount = 0;
+        $jumlahRpFinal = $transaksi->jumlah_rp;
+
+        // Cek apakah ada pemulihan denda
+        if ($request->has('pemulihan_denda') && $request->pemulihan_denda == '1') {
+            // Ambil nilai denda dari detail_biaya
+            if (isset($detailBiaya['denda']) && isset($detailBiaya['denda']['rp_denda'])) {
+                $dendaAmount = $detailBiaya['denda']['rp_denda'];
+                
+                // Pastikan jumlah_rp - rp_denda tidak negatif
+                $jumlahRpFinal = max(0, $transaksi->jumlah_rp - $dendaAmount);
+                
+                // Simpan denda asli untuk riwayat
+                $detailBiaya['denda']['rp_denda_asli'] = $detailBiaya['denda']['rp_denda'];
+                
+                // Update detail_biaya untuk menandai denda telah diampuni
+                $detailBiaya['denda']['rp_denda'] = 0;
+                $detailBiaya['denda']['status_pemulihan'] = true;
+                $detailBiaya['denda']['tanggal_pemulihan'] = now()->toDateTimeString();
+                $detailBiaya['denda']['petugas_pemulihan'] = auth()->user()->id_users ?? 'Unknown';
+                
+                // Simpan detail_biaya yang sudah diupdate
+                $transaksi->detail_biaya = json_encode($detailBiaya);
+            }
+        }
+
+        // Calculate kembalian berdasarkan jumlah final
+        $kembalian = $request->uang_bayar - $jumlahRpFinal;
 
         // Update the attributes
         $transaksi->tgl_pembayaran = now();
         $transaksi->status_pembayaran = $request->status_pembayaran ?? 'Lunas';
         $transaksi->uang_bayar = $request->uang_bayar;
         $transaksi->kembalian = $kembalian;
+        $transaksi->jumlah_rp = $jumlahRpFinal; // Update jumlah_rp dengan nilai final
+        
+        // Update rp_denda menjadi 0 jika ada pemulihan
+        if ($request->has('pemulihan_denda') && $request->pemulihan_denda == '1' && $dendaAmount > 0) {
+            $transaksi->rp_denda = 0;
+        }
 
         // Save the changes to the existing record
         $transaksi->save();
@@ -287,20 +321,28 @@ public function edit(string $id_transaksi)
             $userName = auth()->user()->id_users ?? 'Unknown';
 
             $bulanTeks = $bulanIndonesia[$bulan] ?? $bulan;
-            $keterangan = "Terima bayar {$bulanTeks} {$tahun} oleh admin {$userName}";
+            
+            // Tambahkan keterangan pemulihan denda jika ada
+            $keteranganPemulihan = '';
+            if ($dendaAmount > 0) {
+                $keteranganPemulihan = " (Pemulihan denda: Rp " . number_format($dendaAmount, 0, ',', '.') . ")";
+            }
+            
+            $keterangan = "Terima bayar {$bulanTeks} {$tahun} oleh admin {$userName}{$keteranganPemulihan}";
 
             // Cek apakah sudah ada laporan dengan bulan dan tahun yang sama
-            $existingLaporan = Laporan::where('keterangan', $keterangan)->first();
+            $existingLaporan = Laporan::where('keterangan', 'like', "Terima bayar {$bulanTeks} {$tahun} oleh admin {$userName}%")->first();
 
             if ($existingLaporan) {
-                // Jika sudah ada, update jumlah uang masuk
-                $existingLaporan->uang_masuk += $transaksi->jumlah_rp;
+                // Jika sudah ada, update jumlah uang masuk dengan jumlah final
+                $existingLaporan->uang_masuk += $jumlahRpFinal;
+                $existingLaporan->keterangan = $keterangan; // Update keterangan jika ada pemulihan
                 $existingLaporan->save();
             } else {
                 // Jika belum ada, buat laporan baru
                 $laporan = new Laporan();
                 $laporan->tanggal = now(); // Tetap menggunakan tanggal hari ini untuk field tanggal
-                $laporan->uang_masuk = $transaksi->jumlah_rp;
+                $laporan->uang_masuk = $jumlahRpFinal; // Gunakan jumlah final
                 $laporan->keterangan = $keterangan;
                 $laporan->save();
             }
@@ -322,7 +364,8 @@ public function edit(string $id_transaksi)
         // Redirect to detail page with success message and data
         return view('lunas.detail', compact('dataTransaksi', 'petugasUsers'))->with([
             'pembayaran_berhasil' => 'Pembayaran berhasil diproses.',
-            'cetakUrl' => $cetakUrl
+            'cetakUrl' => $cetakUrl,
+            'pemulihan_denda' => $dendaAmount > 0 ? $dendaAmount : null
         ]);
 
     } catch (\Exception $e) {

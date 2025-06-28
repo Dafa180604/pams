@@ -105,7 +105,7 @@ class PetugasController extends Controller
             'rw.numeric' => 'RW Wajib Angka!',
             'no_hp.required' => 'Nomor HP Wajib Diisi!',
             'no_hp.numeric' => 'Nomor HP Harus Berupa Angka!',
-            'no_hp.digits_between' => 'Nomor HP Harus Berjumlah 10 hingga 13 Digit!',            
+            'no_hp.digits_between' => 'Nomor HP Harus Berjumlah 10 hingga 13 Digit!',
             'no_hp.unique' => 'Nomor HP sudah digunakan, silakan pilih yang lain.',
             'username.required' => 'Username Wajib Diisi!',
             // 'golongan.required' => 'Golongan Wajib Diisi!',
@@ -341,7 +341,7 @@ class PetugasController extends Controller
         $filterRT = $request->input('rt');
 
         // Query pelanggan dengan filter, hanya yang memiliki role 'pelanggan'
-        $dataPelanggan = Users::where('role', 'pelanggan')
+        $dataPelangganRaw = Users::where('role', 'pelanggan')
             ->when($filterAlamat, function ($query, $filterAlamat) {
                 $query->where('alamat', 'like', "%{$filterAlamat}%");
             })
@@ -353,6 +353,33 @@ class PetugasController extends Controller
             })
             ->get();
 
+        // Kelompokkan data berdasarkan alamat, RW, dan RT
+        $dataPelangganGrouped = $dataPelangganRaw->groupBy(function ($item) {
+            return $item->alamat . '|' . $item->rw . '|' . $item->rt;
+        });
+
+        // Buat struktur data baru untuk area/tempat
+        $dataArea = [];
+        foreach ($dataPelangganGrouped as $key => $group) {
+            $parts = explode('|', $key);
+            $alamat = $parts[0];
+            $rw = $parts[1];
+            $rt = $parts[2];
+
+            // Ambil semua ID pelanggan dalam group ini
+            $pelangganIds = $group->pluck('id_users')->toArray();
+            $jumlahPelanggan = $group->count();
+
+            $dataArea[] = [
+                'alamat' => $alamat,
+                'rw' => $rw,
+                'rt' => $rt,
+                'pelanggan_ids' => $pelangganIds,
+                'jumlah_pelanggan' => $jumlahPelanggan,
+                'area_key' => $key
+            ];
+        }
+
         // Ambil daftar ID pelanggan yang sudah diassign ke petugas ini
         $aksesPelanggan = [];
         if (!empty($petugas->akses_pelanggan)) {
@@ -362,36 +389,67 @@ class PetugasController extends Controller
             }
         }
 
-        // Ambil semua petugas untuk mencari akses ke pelanggan
-        $semuaPetugas = Users::where('role', 'petugas')->get();
+        // Ambil semua petugas beserta akses pelanggan mereka
+        $semuaPetugas = Users::where('role', 'petugas')
+            ->whereNotNull('akses_pelanggan')
+            ->where('akses_pelanggan', '!=', '')
+            ->where('akses_pelanggan', '!=', 'null')
+            ->get();
 
-        // Buat mapping petugas yang memiliki akses ke setiap pelanggan
-        // Logic: Cek kolom akses_pelanggan dari setiap petugas, 
-        //        jika berisi ID pelanggan tertentu, maka petugas tersebut punya akses ke pelanggan itu
-        $petugasAkses = [];
+        // Buat mapping petugas yang memiliki akses ke setiap area
+        $petugasAksesArea = [];
 
-        // Inisialisasi array kosong untuk setiap pelanggan
-        foreach ($dataPelanggan as $pelanggan) {
-            $petugasAkses[$pelanggan->id_users] = [];
-        }
+        foreach ($dataArea as $area) {
+            $petugasAksesArea[$area['area_key']] = [];
+            $petugasYangSudahDitambahkan = [];
 
-        // Periksa setiap petugas dan akses mereka
-        foreach ($semuaPetugas as $ptgs) {
-            if (!empty($ptgs->akses_pelanggan)) {
-                $decoded = json_decode($ptgs->akses_pelanggan, true);
-                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                    // $decoded berisi array ID pelanggan yang bisa diakses oleh petugas ini
-                    foreach ($decoded as $idPelanggan) {
-                        // Cek apakah ID pelanggan ini ada dalam list pelanggan yang ditampilkan
-                        if (isset($petugasAkses[$idPelanggan])) {
-                            $petugasAkses[$idPelanggan][] = [
-                                'id' => $ptgs->id_users,
-                                'nama' => $ptgs->nama
-                            ];
+            // Cek setiap petugas apakah memiliki akses ke area ini
+            foreach ($semuaPetugas as $ptgs) {
+                $aksesPetugasIni = [];
+
+                // Decode akses pelanggan petugas ini
+                if (!empty($ptgs->akses_pelanggan)) {
+                    $decoded = json_decode($ptgs->akses_pelanggan, true);
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                        $aksesPetugasIni = array_map('intval', $decoded); // Convert ke integer
+                    }
+                }
+
+                // Jika petugas ini memiliki akses
+                if (!empty($aksesPetugasIni)) {
+                    // Cek apakah ada pelanggan di area ini yang ada dalam akses petugas ini
+                    $adaAkses = false;
+                    foreach ($area['pelanggan_ids'] as $pelangganId) {
+                        if (in_array((int) $pelangganId, $aksesPetugasIni)) {
+                            $adaAkses = true;
+                            break;
                         }
+                    }
+
+                    // Jika ada akses dan petugas belum ditambahkan
+                    if ($adaAkses && !in_array($ptgs->id_users, $petugasYangSudahDitambahkan)) {
+                        $petugasAksesArea[$area['area_key']][] = [
+                            'id' => $ptgs->id_users,
+                            'nama' => $ptgs->nama
+                        ];
+                        $petugasYangSudahDitambahkan[] = $ptgs->id_users;
                     }
                 }
             }
+        }
+
+        // Tentukan area mana yang sudah dipilih oleh petugas saat ini
+        $areaSelected = [];
+        foreach ($dataArea as $area) {
+            // Cek apakah semua pelanggan di area ini sudah diassign ke petugas saat ini
+            $allAssigned = true;
+            foreach ($area['pelanggan_ids'] as $pelangganId) {
+                if (!in_array((int) $pelangganId, $aksesPelanggan)) {
+                    $allAssigned = false;
+                    break;
+                }
+            }
+            $areaSelected[$area['area_key']] = $allAssigned && count($area['pelanggan_ids']) > 0;
         }
 
         // Ambil data untuk dropdown filter hanya dari pelanggan
@@ -399,10 +457,14 @@ class PetugasController extends Controller
         $rwList = Users::where('role', 'pelanggan')->select('rw')->distinct()->pluck('rw');
         $rtList = Users::where('role', 'pelanggan')->select('rt')->distinct()->pluck('rt');
 
+        // Debug untuk melihat data petugas akses area
+        // \Log::info('Petugas Akses Area Debug:', $petugasAksesArea);
+
         return view('petugas.pilih_pelanggan', [
-            'dataPelanggan' => $dataPelanggan,
+            'dataArea' => $dataArea,
             'aksesPelanggan' => $aksesPelanggan,
-            'petugasAkses' => $petugasAkses,
+            'petugasAksesArea' => $petugasAksesArea,
+            'areaSelected' => $areaSelected,
             'petugas' => $petugas,
             'alamatList' => $alamatList,
             'rwList' => $rwList,
@@ -413,15 +475,49 @@ class PetugasController extends Controller
         ]);
     }
     public function updateAksesPelanggan(Request $request, $id_users)
-    {
+{
+    try {
         $petugas = Users::findOrFail($id_users);
-        $newPelangganIds = $request->pelanggan_ids ?? [];
-
+        $newPelangganIds = $request->input('pelanggan_ids', []);
+        
+        // Pastikan pelanggan_ids adalah array dan filter nilai kosong
+        if (!is_array($newPelangganIds)) {
+            $newPelangganIds = [];
+        }
+        
+        // Filter dan convert ke integer untuk memastikan data valid
+        $newPelangganIds = array_filter(array_map('intval', $newPelangganIds), function($id) {
+            return $id > 0;
+        });
+        
+        // Re-index array untuk menghindari gap
+        $newPelangganIds = array_values($newPelangganIds);
+        
+        // Validasi apakah semua ID pelanggan yang dipilih benar-benar ada dan berole pelanggan
+        $validPelangganIds = Users::where('role', 'pelanggan')
+            ->whereIn('id_users', $newPelangganIds)
+            ->pluck('id_users')
+            ->toArray();
+        
+        // Gunakan hanya ID yang valid
+        $newPelangganIds = array_intersect($newPelangganIds, $validPelangganIds);
+        
         // Find all staff members who have access to the selected customers
         $conflictingAssignments = [];
+        $conflictingAreas = []; // Array untuk menyimpan area yang konflik
 
         // Get all petugas users (excluding current petugas)
-        $allPetugas = Users::where('role', 'petugas')->where('id_users', '!=', $id_users)->get();
+        $allPetugas = Users::where('role', 'petugas')
+            ->where('id_users', '!=', $id_users)
+            ->whereNotNull('akses_pelanggan')
+            ->where('akses_pelanggan', '!=', '')
+            ->get();
+
+        // Get pelanggan data untuk mendapatkan alamat, RT, RW
+        $pelangganData = Users::where('role', 'pelanggan')
+            ->whereIn('id_users', $newPelangganIds)
+            ->get()
+            ->keyBy('id_users');
 
         // Check each selected customer for existing assignments to other staff
         foreach ($newPelangganIds as $pelangganId) {
@@ -432,25 +528,52 @@ class PetugasController extends Controller
                 if (!empty($otherPetugas->akses_pelanggan)) {
                     $decoded = json_decode($otherPetugas->akses_pelanggan, true);
                     if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                        $otherAccessList = $decoded;
+                        $otherAccessList = array_map('intval', $decoded);
                     }
                 }
 
                 // Check if this pelanggan is in the other staff's access list
                 if (in_array($pelangganId, $otherAccessList)) {
-                    // Get the customer name
-                    $pelanggan = Users::find($pelangganId);
-                    $pelangganName = $pelanggan ? $pelanggan->nama : "ID: " . $pelangganId;
-
-                    // Store the conflict
-                    $conflictingAssignments[] = [
-                        'pelanggan_id' => $pelangganId,
-                        'pelanggan_name' => $pelangganName,
-                        'petugas_id' => $otherPetugas->id_users,
-                        'petugas_name' => $otherPetugas->nama
-                    ];
+                    // Get the customer data
+                    $pelanggan = $pelangganData->get($pelangganId);
+                    
+                    if ($pelanggan) {
+                        // Buat area key untuk grouping
+                        $areaKey = $pelanggan->alamat . '|' . $pelanggan->rw . '|' . $pelanggan->rt;
+                        $areaDisplay = $pelanggan->alamat . ' RT ' . $pelanggan->rt . ' RW ' . $pelanggan->rw;
+                        
+                        // Check if this area conflict is already recorded for this petugas
+                        $conflictKey = $areaKey . '|' . $otherPetugas->id_users;
+                        
+                        if (!isset($conflictingAreas[$conflictKey])) {
+                            $conflictingAreas[$conflictKey] = [
+                                'area_display' => $areaDisplay,
+                                'area_key' => $areaKey,
+                                'petugas_id' => $otherPetugas->id_users,
+                                'petugas_name' => $otherPetugas->nama,
+                                'pelanggan_count' => 0,
+                                'pelanggan_ids' => []
+                            ];
+                        }
+                        
+                        // Tambahkan pelanggan ke area conflict ini
+                        $conflictingAreas[$conflictKey]['pelanggan_count']++;
+                        $conflictingAreas[$conflictKey]['pelanggan_ids'][] = $pelangganId;
+                    }
                 }
             }
+        }
+
+        // Convert conflicting areas to the format expected by the view
+        foreach ($conflictingAreas as $conflict) {
+            $conflictingAssignments[] = [
+                'area_display' => $conflict['area_display'],
+                'area_key' => $conflict['area_key'],
+                'petugas_id' => $conflict['petugas_id'],
+                'petugas_name' => $conflict['petugas_name'],
+                'pelanggan_count' => $conflict['pelanggan_count'],
+                'pelanggan_ids' => $conflict['pelanggan_ids']
+            ];
         }
 
         // If there are conflicts and we're not confirming changes yet
@@ -459,13 +582,13 @@ class PetugasController extends Controller
             return redirect()->back()
                 ->with('conflicts', $conflictingAssignments)
                 ->with('new_assignments', $newPelangganIds)
-                ->with('warning', 'Terdapat pelanggan yang sudah ditugaskan ke petugas lain. Pastikan Anda ingin mengubah penugasan.');
+                ->with('warning', 'Terdapat area yang sudah ditugaskan ke petugas lain. Pastikan Anda ingin mengubah penugasan.');
         }
 
         // If we're confirming changes or no conflicts exist, proceed with updates
 
         // If confirming changes, remove customer access from other staff members
-        if ($request->has('confirm_reassign')) {
+        if ($request->has('confirm_reassign') && !empty($conflictingAssignments)) {
             foreach ($allPetugas as $otherPetugas) {
                 $otherAccessList = [];
                 $updated = false;
@@ -474,15 +597,14 @@ class PetugasController extends Controller
                 if (!empty($otherPetugas->akses_pelanggan)) {
                     $decoded = json_decode($otherPetugas->akses_pelanggan, true);
                     if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                        $otherAccessList = $decoded;
+                        $otherAccessList = array_map('intval', $decoded);
 
                         // Remove any pelanggan that's being reassigned
-                        foreach ($newPelangganIds as $pelangganId) {
-                            $key = array_search($pelangganId, $otherAccessList);
-                            if ($key !== false) {
-                                unset($otherAccessList[$key]);
-                                $updated = true;
-                            }
+                        $originalCount = count($otherAccessList);
+                        $otherAccessList = array_diff($otherAccessList, $newPelangganIds);
+                        
+                        if (count($otherAccessList) !== $originalCount) {
+                            $updated = true;
                         }
 
                         // Re-index the array to avoid having arrays with gaps
@@ -490,7 +612,7 @@ class PetugasController extends Controller
 
                         // Update if changes were made
                         if ($updated) {
-                            $otherPetugas->akses_pelanggan = json_encode($otherAccessList);
+                            $otherPetugas->akses_pelanggan = empty($otherAccessList) ? null : json_encode($otherAccessList);
                             $otherPetugas->save();
                         }
                     }
@@ -499,9 +621,31 @@ class PetugasController extends Controller
         }
 
         // Update the current petugas access list
-        $petugas->akses_pelanggan = empty($newPelangganIds) ? null : json_encode($newPelangganIds);
+        if (empty($newPelangganIds)) {
+            $petugas->akses_pelanggan = null;
+        } else {
+            // Pastikan tidak ada duplikasi dan urutkan ID
+            $newPelangganIds = array_unique($newPelangganIds);
+            sort($newPelangganIds);
+            $petugas->akses_pelanggan = json_encode($newPelangganIds);
+        }
+        
         $petugas->save();
 
-        return redirect()->route('petugas.index')->with('berhasil', 'Pilih Penugasan berhasil diperbarui.');
+        // Log untuk debugging (opsional, bisa dihapus di production)
+        \Log::info('Akses pelanggan updated', [
+            'petugas_id' => $id_users,
+            'pelanggan_ids' => $newPelangganIds,
+            'total_pelanggan' => count($newPelangganIds)
+        ]);
+
+        return redirect()->route('petugas.index')->with('berhasil', 'Penugasan area berhasil diperbarui. Total ' . count($newPelangganIds) . ' pelanggan ditugaskan.');
+        
+    } catch (\Exception $e) {
+        // Log error untuk debugging
+        \Log::error('Error updating akses pelanggan: ' . $e->getMessage());
+        
+        return redirect()->back()->with('gagal', 'Terjadi kesalahan saat memperbarui penugasan area. Silakan coba lagi.');
     }
+}
 }

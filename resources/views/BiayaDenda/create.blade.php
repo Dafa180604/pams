@@ -31,14 +31,26 @@
                                 <div class="col-sm-6">
                                     <div class="mb-3">
                                         <label class="form-label">Biaya Telat (Rp)</label>
-                                        <input type="text" name="biaya_telat" class="form-control"
-                                            placeholder="Masukkan Biaya Telat (Rp)" value="{{ old('biaya_telat') }}">
+                                        <div class="input-group">
+                                            <input type="text" name="biaya_telat" id="biaya_telat" class="form-control"
+                                                placeholder="Masukkan Biaya Telat (Rp)" value="{{ old('biaya_telat') }}">
+                                            <div class="input-group-text">
+                                                <input class="form-check-input mt-0" type="checkbox" id="is_max" name="is_max" value="1" {{ old('is_max') ? 'checked' : '' }}>
+                                                <label class="form-check-label ms-2" for="is_max">
+                                                    <small><strong>Denda Maks</strong></small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">
+                                            Centang "Denda Maks" jika ini adalah tingkat denda tertinggi. Setelah ditetapkan, tidak dapat menambah data baru lagi.
+                                        </small>
                                         @error('biaya_telat')
                                             <div class="text-danger">{{ $message }}</div>
                                         @enderror
                                     </div>
                                 </div><!-- Col --><!-- Col -->
                             </div>
+
                             <a href="{{ route('BiayaDenda.index') }}" type="reset" class="btn btn-secondary">Batal</a>
                             <button type="submit" class="btn btn-primary">Tambahkan</button>
                         </form>
@@ -58,4 +70,37 @@
             </div>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const isMaxCheckbox = document.getElementById('is_max');
+            const biayaTelatInput = document.getElementById('biaya_telat');
+            let originalValue = biayaTelatInput.value;
+
+            isMaxCheckbox.addEventListener('change', function() {
+                if (this.checked) {
+                    // Simpan nilai asli jika ada
+                    if (biayaTelatInput.value !== '') {
+                        originalValue = biayaTelatInput.value;
+                    }
+                    // Kosongkan field dan disable input
+                    biayaTelatInput.value = '';
+                    biayaTelatInput.setAttribute('readonly', true);
+                    biayaTelatInput.style.backgroundColor = '#f8f9fa';
+                } else {
+                    // Restore nilai asli
+                    biayaTelatInput.value = originalValue;
+                    biayaTelatInput.removeAttribute('readonly');
+                    biayaTelatInput.style.backgroundColor = '';
+                }
+            });
+
+            // Jika checkbox sudah checked saat load (old input)
+            if (isMaxCheckbox.checked) {
+                biayaTelatInput.value = '';
+                biayaTelatInput.setAttribute('readonly', true);
+                biayaTelatInput.style.backgroundColor = '#f8f9fa';
+            }
+        });
+    </script>
 @endsection

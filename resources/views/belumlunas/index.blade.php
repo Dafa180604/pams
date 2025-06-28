@@ -30,12 +30,19 @@
                                         <th>JUMLAH PEMAKAIAN</th>
                                         <th>JUMLAH RP</th>
                                         <th>TANGGAL PENCATATAN</th>
+                                        <th>TELAT PEMBAYARAN</th>
                                         <th>PETUGAS</th>
                                         <th>ACTION</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach($dataTransaksi as $data)
+                                        @php
+                                            // Hitung selisih hari antara hari ini dengan waktu_catat
+                                            $waktuCatat = \Carbon\Carbon::parse($data->pemakaian->waktu_catat);
+                                            $hariSekarang = \Carbon\Carbon::now();
+                                            $telatHari = floor($waktuCatat->diffInDays($hariSekarang));
+                                        @endphp
                                         <tr>
                                             <td>{{$loop->iteration}}</td>
                                             <td>{{ $data->id_pemakaian}}</td>
@@ -44,8 +51,15 @@
                                             <td>{{ $data->pemakaian->meter_awal}}</td>
                                             <td>{{ $data->pemakaian->meter_akhir}}</td>
                                             <td>{{ $data->pemakaian->jumlah_pemakaian}}</td>
-                                            <td>{{ $data->jumlah_rp}}</td>
+                                            <td>{{ number_format($data->jumlah_rp, 0, ',', '.') }}</td>
                                             <td>{{ $data->pemakaian->waktu_catat}}</td>
+                                            <td>
+                                                @if($telatHari > 0)
+                                                    <span class="text-danger fw-bold">{{ $telatHari }} hari terlambat</span>
+                                                @else
+                                                    <span class="text-success fw-bold">Tepat waktu</span>
+                                                @endif
+                                            </td>
                                             <td>
                                                 @if(isset($petugasUsers[$data->pemakaian->petugas]))
                                                     {{ $petugasUsers[$data->pemakaian->petugas]->nama }}
@@ -61,7 +75,7 @@
                                             </td>
                                             <td>
                                                 <a href="{{ route('belumlunas.edit', $data->id_transaksi) }}"
-                                                    class="btn btn-success">Bayar</a>
+                                                    class="btn btn-success btn-sm">Bayar</a>
                                             </td>
                                         </tr>
                                     @endforeach
