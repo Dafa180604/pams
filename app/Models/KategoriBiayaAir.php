@@ -13,6 +13,6 @@ class KategoriBiayaAir extends Model
     protected $fillable=['id_kategori_biaya','batas_bawah','batas_atas','tarif'];
 
     public function Transaksi(){
-        return $this->hasOne(Transaksi::class,'id_transaksi');
+        return $this->hasOne(Transaksi::class,'id_kategori_biaya');
     }
 }

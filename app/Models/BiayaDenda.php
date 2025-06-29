@@ -16,6 +16,6 @@ class BiayaDenda extends Model
 
     public function Transaksi()
     {
-        return $this->hasOne(Transaksi::class, 'id_transaksi');
+        return $this->hasOne(Transaksi::class, 'id_biaya_denda');
     }
 }

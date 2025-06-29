@@ -44,6 +44,7 @@
                                         <th>ALAMAT</th>
                                         <th>TELEPON</th>
                                         <th>GOLONGAN</th>
+                                        <th>STATUS</th>
                                         <th>AKSI</th>
                                     </tr>
                                 </thead>
@@ -67,6 +68,7 @@
                                             </td>
                                             <td>{{ $pelanggan->no_hp }}</td>
                                             <td>{{ $pelanggan->golongan }}</td>
+                                            <td>{{ $pelanggan->status }}</td>
                                             <td>
                                                 <a href="{{ route('pelanggan.show', $pelanggan->id_users) }}"
                                                     class="btn btn-info">Detail</a>

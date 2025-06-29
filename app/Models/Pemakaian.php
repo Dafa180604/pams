@@ -19,6 +19,6 @@ class Pemakaian extends Model
     
     public function Transaksi()
     {
-        return $this->hasMany(Transaksi::class, 'id_transaksi');
+        return $this->hasMany(Transaksi::class, 'id_pemakaian');
     }
 }

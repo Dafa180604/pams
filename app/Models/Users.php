@@ -13,13 +13,16 @@ class Users extends Authenticatable
     use HasFactory;
     use SoftDeletes;
     use HasApiTokens;
-    protected $table='users';
-    protected $primaryKey='id_users';
-    protected $fillable=['id_users','nama','alamat','rw','rt','no_hp','username','password','role','foto_profile','golongan','jumlah_air','akses_pelanggan'];
-    public function Pemakaian(){
-        return $this->hasMany(Pemakaian::class,'id_pemakaian');
+    protected $table = 'users';
+    protected $primaryKey = 'id_users';
+    protected $fillable = ['id_users', 'nama', 'alamat', 'rw', 'rt', 'no_hp', 'username', 'password', 'role', 'foto_profile', 'golongan', 'status', 'jumlah_air', 'akses_pelanggan'];
+    // Model Users
+    public function pemakaian()
+    {
+        return $this->hasMany(Pemakaian::class, 'id_users'); // <- foreign key yang benar
     }
-    public function Keluhan(){
-        return $this->hasMany(Keluhan::class,'id_keluhan');
+    public function Keluhan()
+    {
+        return $this->hasMany(Keluhan::class, 'id_users');
     }
 }

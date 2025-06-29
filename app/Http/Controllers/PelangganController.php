@@ -123,6 +123,7 @@ class PelangganController extends Controller
             $data->password = $passwordToStore;
             $data->role = 'pelanggan';
             $data->golongan = $request->golongan;
+            $data->status = 'Aktif';
             $data->jumlah_air = $request->jumlah_air;
             $data->save();
 

@@ -13,6 +13,6 @@ class BebanBiaya extends Model
     protected $fillable=['id_beban_biaya','tarif','keterangan'];
 
     public function Transaksi(){
-        return $this->hasOne(Transaksi::class,'id_transaksi');
+        return $this->hasOne(Transaksi::class,'id_beban_biaya');
     }
 }

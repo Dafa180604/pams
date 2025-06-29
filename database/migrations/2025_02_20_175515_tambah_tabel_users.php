@@ -23,6 +23,7 @@ return new class extends Migration
             $table->string('role');
             $table->string('foto_profile')->nullable();
             $table->enum('golongan', ['Bantuan', 'Berbayar'])->nullable();
+            $table->enum('status', ['Aktif', 'Tidak Aktif'])->nullable();
             $table->integer('jumlah_air')->nullable();
             $table->string('akses_pelanggan',500)->nullable();
             $table->timestamps();
