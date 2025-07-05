@@ -159,7 +159,7 @@
                 text: '{{ session("error") }}',
                 icon: 'error',
                 confirmButtonText: 'OK'
-            });
+            }); 
         @elseif(session('pembayaran_berhasil'))
             Swal.fire({
                 title: 'Pembayaran Berhasil!',

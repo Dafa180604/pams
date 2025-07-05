@@ -29,9 +29,20 @@
                                 </div>
                                 <div class="col-sm-6">
                                     <div class="mb-3">
-                                        <label class="form-label">Alamat</label>
-                                        <textarea name="alamat" class="form-control"
-                                            placeholder="Masukkan Alamat">{{ old('alamat') }}</textarea>
+                                        <label class="form-label">Alamat (Desa)</label>
+                                        <select name="alamat" class="form-control">
+                                            <option value="">Pilih Desa</option>
+                                            <option value="Watuduwur" {{ old('alamat') == 'Watuduwur' ? 'selected' : '' }}>
+                                                Watuduwur</option>
+                                            <option value="Pulorjo" {{ old('alamat') == 'Pulorjo' ? 'selected' : '' }}>
+                                                Pulorjo</option>
+                                            <option value="Babadan" {{ old('alamat') == 'Babadan' ? 'selected' : '' }}>
+                                                Babadan</option>
+                                            <option value="Tenggerlor" {{ old('alamat') == 'Tenggerlor' ? 'selected' : '' }}>
+                                                Tenggerlor</option>
+                                            <option value="Wangkal" {{ old('alamat') == 'Wangkal' ? 'selected' : '' }}>
+                                                Wangkal</option>
+                                        </select>
                                         @error('alamat')
                                             <div class="text-danger">{{ $message }}</div>
                                         @enderror
@@ -55,8 +66,13 @@
                                         <div class="col-sm-6">
                                             <div class="mb-3">
                                                 <label class="form-label">RT</label>
-                                                <input type="text" name="rt" class="form-control" placeholder="Masukkan RT"
-                                                    value="{{ old('rt') }}">
+                                                <select name="rt" class="form-control">
+                                                    <option value="">Pilih RT</option>
+                                                    @for ($i = 1; $i <= 10; $i++)
+                                                        <option value="{{ $i }}" {{ old('rt') == $i ? 'selected' : '' }}>
+                                                            {{ $i }}</option>
+                                                    @endfor
+                                                </select>
                                                 @error('rt')
                                                     <div class="text-danger">{{ $message }}</div>
                                                 @enderror
@@ -65,8 +81,13 @@
                                         <div class="col-sm-6">
                                             <div class="mb-3">
                                                 <label class="form-label">RW</label>
-                                                <input type="text" name="rw" class="form-control" placeholder="Masukkan RW"
-                                                    value="{{ old('rw') }}">
+                                                <select name="rw" class="form-control">
+                                                    <option value="">Pilih RW</option>
+                                                    @for ($i = 1; $i <= 10; $i++)
+                                                        <option value="{{ $i }}" {{ old('rw') == $i ? 'selected' : '' }}>
+                                                            {{ $i }}</option>
+                                                    @endfor
+                                                </select>
                                                 @error('rw')
                                                     <div class="text-danger">{{ $message }}</div>
                                                 @enderror
@@ -92,8 +113,7 @@
                                     <div class="mb-3">
                                         <label class="form-label">Golongan</label>
                                         <select name="golongan" class="form-control">
-                                            <option value="">Pilih
-                                                Golongan</option>
+                                            <option value="">Pilih Golongan</option>
                                             <option value="Bantuan" {{ old('golongan') == 'Bantuan' ? 'selected' : '' }}>
                                                 Bantuan</option>
                                             <option value="Berbayar" {{ old('golongan') == 'Berbayar' ? 'selected' : '' }}>
@@ -104,7 +124,6 @@
                                         @enderror
                                     </div>
                                 </div>
-
                             </div>
 
                             <div class="row">

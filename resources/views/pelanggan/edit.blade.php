@@ -31,7 +31,14 @@
                             <div class="col-sm-6">
                                 <div class="mb-3">
                                     <label class="form-label">Alamat</label>
-                                    <textarea name="alamat" class="form-control" placeholder="Masukkan Alamat">{{ old('alamat', $data->alamat) }}</textarea>
+                                    <select name="alamat" class="form-control">
+                                        <option value="">Pilih Alamat</option>
+                                        <option value="Watuduwur" {{ old('alamat', $data->alamat) == 'Watuduwur' ? 'selected' : '' }}>Watuduwur</option>
+                                        <option value="Pulorjo" {{ old('alamat', $data->alamat) == 'Pulorjo' ? 'selected' : '' }}>Pulorjo</option>
+                                        <option value="Babadan" {{ old('alamat', $data->alamat) == 'Babadan' ? 'selected' : '' }}>Babadan</option>
+                                        <option value="Tenggerlor" {{ old('alamat', $data->alamat) == 'Tenggerlor' ? 'selected' : '' }}>Tenggerlor</option>
+                                        <option value="Wangkal" {{ old('alamat', $data->alamat) == 'Wangkal' ? 'selected' : '' }}>Wangkal</option>
+                                    </select>
                                     @error('alamat')
                                         <div class="text-danger">{{ $message }}</div>
                                     @enderror
@@ -55,8 +62,12 @@
                                     <div class="col-sm-6">
                                         <div class="mb-3">
                                             <label class="form-label">RT</label>
-                                            <input type="text" name="rt" class="form-control" placeholder="Masukkan RT" 
-                                                value="{{ old('rt', $data->rt) }}">
+                                            <select name="rt" class="form-control">
+                                                <option value="">Pilih RT</option>
+                                                @for($i = 1; $i <= 10; $i++)
+                                                    <option value="{{ $i }}" {{ old('rt', $data->rt) == $i ? 'selected' : '' }}>{{ $i }}</option>
+                                                @endfor
+                                            </select>
                                             @error('rt')
                                                 <div class="text-danger">{{ $message }}</div>
                                             @enderror
@@ -65,8 +76,12 @@
                                     <div class="col-sm-6">
                                         <div class="mb-3">
                                             <label class="form-label">RW</label>
-                                            <input type="text" name="rw" class="form-control" placeholder="Masukkan RW" 
-                                                value="{{ old('rw', $data->rw) }}">
+                                            <select name="rw" class="form-control">
+                                                <option value="">Pilih RW</option>
+                                                @for($i = 1; $i <= 10; $i++)
+                                                    <option value="{{ $i }}" {{ old('rw', $data->rw) == $i ? 'selected' : '' }}>{{ $i }}</option>
+                                                @endfor
+                                            </select>
                                             @error('rw')
                                                 <div class="text-danger">{{ $message }}</div>
                                             @enderror

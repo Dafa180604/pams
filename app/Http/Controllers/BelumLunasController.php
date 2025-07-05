@@ -16,8 +16,24 @@ class BelumLunasController extends Controller
      */
     public function index()
     {
-        $dataPemakaian = Pemakaian::all();
-        $dataTransaksi = Transaksi::with('pemakaian')->where('status_pembayaran', '!=', 'lunas')->get();
+        $dataPemakaian = Pemakaian::whereHas('users', function ($query) {
+            $query->where('status', '!=', 'Tidak Aktif')
+                ->orWhereNull('status');
+        })->get();
+
+        $dataTransaksi = Transaksi::with([
+            'pemakaian' => function ($query) {
+                $query->whereHas('users', function ($subQuery) {
+                    $subQuery->where('status', '!=', 'Tidak Aktif')
+                        ->orWhereNull('status');
+                });
+            }
+        ])->where('status_pembayaran', '!=', 'lunas')->get();
+
+        // Filter out transactions where pemakaian is null (due to user status filter)
+        $dataTransaksi = $dataTransaksi->filter(function ($transaksi) {
+            return $transaksi->pemakaian !== null;
+        });
 
         // Collect all petugas IDs
         $petugasIds = collect();
@@ -28,10 +44,14 @@ class BelumLunasController extends Controller
         }
         $petugasIds = $petugasIds->unique()->filter();
 
-        // Get all petugas users in one query
+        // Get all petugas users in one query (exclude inactive users)
         $petugasUsers = [];
         if ($petugasIds->isNotEmpty()) {
-            $petugasUsers = Users::whereIn('id_users', $petugasIds)->get()->keyBy('id_users');
+            $petugasUsers = Users::whereIn('id_users', $petugasIds)
+                ->where(function ($query) {
+                    $query->where('status', '!=', 'Tidak Aktif')
+                        ->orWhereNull('status');
+                })->get()->keyBy('id_users');
         }
 
         return view('belumlunas.index', [
@@ -70,8 +90,36 @@ class BelumLunasController extends Controller
      */
     public function edit(string $id_transaksi)
     {
-        // Find the transaction with related data including user
-        $data = Transaksi::with(['pemakaian.users'])->find($id_transaksi);
+        // Find the transaction with related data including user (exclude inactive users and only belum lunas)
+        $data = Transaksi::with([
+            'pemakaian' => function ($query) {
+                $query->whereHas('users', function ($subQuery) {
+                    $subQuery->where('status', '!=', 'Tidak Aktif')
+                        ->orWhereNull('status');
+                });
+            },
+            'pemakaian.users' => function ($query) {
+                $query->where('status', '!=', 'Tidak Aktif')
+                    ->orWhereNull('status');
+            }
+        ])
+            ->where('status_pembayaran', '!=', 'lunas')
+            ->where(function ($query) {
+                $query->where('status_pembayaran', 'Belum Bayar')
+                    ->orWhere('status_pembayaran', 'belum lunas')
+                    ->orWhereNull('status_pembayaran');
+            })
+            ->find($id_transaksi);
+
+        // Check if transaction exists, has valid pemakaian (user not inactive), and is not paid yet
+        if (!$data) {
+            return redirect()->back()->with('error', '');//???
+        }
+
+        if (!$data->pemakaian) {
+            return redirect()->back()->with('error', 'Transaksi tidak dapat diakses karena user tidak aktif.');
+        }
+
         if ($data) {
             // Calculate days since the recording date
             $waktuCatat = new DateTime($data->pemakaian->waktu_catat);
@@ -80,117 +128,126 @@ class BelumLunasController extends Controller
             $daysDifference = $interval->days;
 
             // Check if should apply, update, or remove late fee
-            if ($daysDifference >= 1) {
+            // PERBAIKAN: Cek apakah ada kategori denda yang sesuai dengan jumlah hari terlambat
+            $biayaDenda = null;
 
-                // Find the appropriate late fee entry based on days late
+            if ($daysDifference >= 1) {
+                // TERLAMBAT - Cari kategori denda yang sesuai
+
+                // Find the appropriate late fee entry based on days late (exact match first)
                 $biayaDenda = BiayaDenda::where('jumlah_telat', $daysDifference)
                     ->first();
 
                 // If no exact match, find the appropriate category
                 if (!$biayaDenda) {
-                    // Get all late fee categories ordered by jumlah_telat descending
-                    // This ensures we check from highest threshold to lowest
-                    $allDendaCategories = BiayaDenda::orderBy('jumlah_telat', 'desc')->get();
+                    // Get the minimum threshold that applies to this daysDifference
+                    // PERBAIKAN: Cari kategori dengan threshold terkecil yang <= daysDifference
+                    $biayaDenda = BiayaDenda::where('jumlah_telat', '<=', $daysDifference)
+                        ->orderBy('jumlah_telat', 'desc') // Ambil yang terbesar dari yang memenuhi syarat
+                        ->first();
+                }
+            }
 
-                    // Find the appropriate category based on days difference
-                    // Use the highest threshold that the daysDifference meets or exceeds
-                    foreach ($allDendaCategories as $category) {
-                        if ($daysDifference >= $category->jumlah_telat) {
-                            $biayaDenda = $category;
-                            break; // Take the first match (highest applicable threshold)
+            if ($biayaDenda) {
+                // Ada kategori denda yang sesuai - Apply atau update denda
+
+                // Check if we need to update the late fee
+                $needsUpdate = false;
+
+                if (!$data->id_biaya_denda) {
+                    // No late fee applied yet
+                    $needsUpdate = true;
+                } else {
+                    // Late fee exists, check if we need to update
+                    $detailBiaya = json_decode($data->detail_biaya, true);
+
+                    // Update if:
+                    // 1. Days have changed (increased or decreased), OR
+                    // 2. Category has changed (different id_biaya_denda), OR
+                    // 3. No detail recorded properly
+                    if (isset($detailBiaya['denda']['jumlah_telat'])) {
+                        $savedDays = $detailBiaya['denda']['jumlah_telat'];
+                        $savedCategoryId = $detailBiaya['denda']['id'] ?? null;
+
+                        if (
+                            $daysDifference != $savedDays ||
+                            $biayaDenda->id_biaya_denda != $savedCategoryId
+                        ) {
+                            $needsUpdate = true;
                         }
+                    } else {
+                        // Late fee exists but no detail recorded, update it
+                        $needsUpdate = true;
                     }
                 }
 
-                // If a matching late fee category is found
-                if ($biayaDenda) {
-                    // Check if we need to update the late fee
-                    $needsUpdate = false;
+                if ($needsUpdate) {
+                    \Log::info("Applying late fee for transaction {$id_transaksi}. Days late: {$daysDifference}, Category: {$biayaDenda->jumlah_telat} days, Amount: Rp." . number_format($biayaDenda->biaya_telat));
 
-                    if (!$data->id_biaya_denda) {
-                        // No late fee applied yet
-                        $needsUpdate = true;
-                    } else {
-                        // Late fee exists, check if we need to update
-                        $detailBiaya = json_decode($data->detail_biaya, true);
+                    // Use the direct Rupiah amount from the biaya_telat column
+                    $rpDenda = $biayaDenda->biaya_telat;
 
-                        // Update if:
-                        // 1. Days have changed (increased or decreased), OR
-                        // 2. Category has changed (different id_biaya_denda), OR
-                        // 3. No detail recorded properly
-                        if (isset($detailBiaya['denda']['jumlah_telat'])) {
-                            $savedDays = $detailBiaya['denda']['jumlah_telat'];
-                            $savedCategoryId = $detailBiaya['denda']['id'] ?? null;
-
-                            if (
-                                $daysDifference != $savedDays ||
-                                $biayaDenda->id_biaya_denda != $savedCategoryId
-                            ) {
-                                $needsUpdate = true;
-                            }
-                        } else {
-                            // Late fee exists but no detail recorded, update it
-                            $needsUpdate = true;
-                        }
+                    // Calculate original total (subtract old late fee if exists)
+                    $originalTotal = $data->jumlah_rp;
+                    if ($data->rp_denda) {
+                        $originalTotal -= $data->rp_denda;
                     }
 
-                    if ($needsUpdate) {
-                        // Use the direct Rupiah amount from the biaya_telat column
-                        $rpDenda = $biayaDenda->biaya_telat;
+                    // Update the transaction data with late fee information
+                    $data->id_biaya_denda = $biayaDenda->id_biaya_denda;
+                    $data->rp_denda = $rpDenda;
 
-                        // Calculate original total (subtract old late fee if exists)
-                        $originalTotal = $data->jumlah_rp;
-                        if ($data->rp_denda) {
-                            $originalTotal -= $data->rp_denda;
+                    // Update the total amount to include the new late fee
+                    $data->jumlah_rp = $originalTotal + $rpDenda;
+
+                    // Update the detail_biaya JSON to include late fee
+                    $detailBiaya = json_decode($data->detail_biaya, true);
+                    $detailBiaya['denda'] = [
+                        'id' => $biayaDenda->id_biaya_denda,
+                        'jumlah_telat' => $daysDifference, // Actual days late
+                        'kategori_telat' => $biayaDenda->jumlah_telat, // Category threshold used
+                        'biaya_telat' => $rpDenda, // Direct Rupiah amount
+                        'rp_denda' => $rpDenda,  // Same as biaya_telat since it's a direct amount
+                        'updated_at' => date('Y-m-d H:i:s') // Track when fee was last updated
+                    ];
+                    $data->detail_biaya = json_encode($detailBiaya);
+
+                    // Save the updated transaction
+                    $data->save();
+
+                    // Refresh the data after updates
+                    $data = Transaksi::with([
+                        'pemakaian.users' => function ($query) {
+                            $query->where('status', '!=', 'Tidak Aktif')
+                                ->orWhereNull('status');
                         }
+                    ])->find($id_transaksi);
+                }
 
-                        // Update the transaction data with late fee information
-                        $data->id_biaya_denda = $biayaDenda->id_biaya_denda;
-                        $data->rp_denda = $rpDenda;
+                // [PERBAIKAN UTAMA] Check if user should be deactivated based on BiayaDenda configuration
+                // User akan menjadi "Tidak Aktif" jika biaya_telat mencapai 1000000
+                if ($biayaDenda->biaya_telat >= 1000000 && $data->pemakaian && $data->pemakaian->id_users) {
+                    $user = Users::where('id_users', $data->pemakaian->id_users)
+                        ->where(function ($query) {
+                            $query->where('status', '!=', 'Tidak Aktif')
+                                ->orWhereNull('status');
+                        })->first();
 
-                        // Update the total amount to include the new late fee
-                        $data->jumlah_rp = $originalTotal + $rpDenda;
+                    if ($user && ($user->status == 'Aktif' || $user->status == null || $user->status == '')) {
+                        $user->status = 'Tidak Aktif';
+                        $user->save();
 
-                        // Update the detail_biaya JSON to include late fee
-                        $detailBiaya = json_decode($data->detail_biaya, true);
-                        $detailBiaya['denda'] = [
-                            'id' => $biayaDenda->id_biaya_denda,
-                            'jumlah_telat' => $daysDifference, // Actual days late
-                            'kategori_telat' => $biayaDenda->jumlah_telat, // Category threshold used
-                            'biaya_telat' => $rpDenda, // Direct Rupiah amount
-                            'rp_denda' => $rpDenda,  // Same as biaya_telat since it's a direct amount
-                            'updated_at' => date('Y-m-d H:i:s') // Track when fee was last updated
-                        ];
-                        $data->detail_biaya = json_encode($detailBiaya);
-
-                        // Save the updated transaction
-                        $data->save();
-
-                        // Refresh the data after updates
-                        $data = Transaksi::with(['pemakaian.users'])->find($id_transaksi);
-                    }
-
-                    // Check if user should be deactivated based on days late OR denda amount
-                    // Deactivate user if late for more than 7 days OR if denda reaches 1,000,000
-                    $currentDenda = $data->rp_denda ?? 0; // Get current denda from database
-                    if (($daysDifference >= 7 || $currentDenda >= 1000000) && $data->pemakaian && $data->pemakaian->id_users) {
-                        $user = Users::find($data->pemakaian->id_users);
-                        if ($user && ($user->status == 'Aktif' || $user->status == null || $user->status == '')) {
-                            $user->status = 'Tidak Aktif';
-                            $user->save();
-
-                            // Log for debugging with specific reason
-                            if ($currentDenda >= 1000000) {
-                                \Log::info("User {$user->id_users} status changed to 'Tidak Aktif' due to denda reaching Rp " . number_format($currentDenda));
-                            } else {
-                                \Log::info("User {$user->id_users} status changed to 'Tidak Aktif' due to {$daysDifference} days late");
-                            }
-                        }
+                        // Log for debugging with specific reason
+                        \Log::info("User {$user->id_users} status changed to 'Tidak Aktif' due to biaya_telat reaching Rp " . number_format($biayaDenda->biaya_telat) . " (threshold: Rp 1,000,000)");
                     }
                 }
             } else {
-                // Not late anymore, remove late fee if exists
-                if ($data->id_biaya_denda) {
+                // TIDAK ADA KATEGORI DENDA YANG SESUAI atau TIDAK TERLAMBAT
+                // Hapus denda jika ada
+
+                if ($data->id_biaya_denda || $data->rp_denda > 0) {
+                    \Log::info("Removing late fee for transaction {$id_transaksi}. Days difference: {$daysDifference} (no applicable late fee category or not late)");
+
                     // Calculate original total (subtract old late fee)
                     $originalTotal = $data->jumlah_rp;
                     if ($data->rp_denda) {
@@ -212,39 +269,61 @@ class BelumLunasController extends Controller
                     // Save the updated transaction
                     $data->save();
 
-                    // Refresh the data after updates
-                    $data = Transaksi::with(['pemakaian.users'])->find($id_transaksi);
+                    \Log::info("Late fee removed successfully for transaction {$id_transaksi}");
 
-                    // Reactivate user if payment is no longer late
+                    // Refresh the data after updates
+                    $data = Transaksi::with([
+                        'pemakaian.users' => function ($query) {
+                            $query->where('status', '!=', 'Tidak Aktif')
+                                ->orWhereNull('status');
+                        }
+                    ])->find($id_transaksi);
+
+                    // [PERBAIKAN] Reactivate user if payment is no longer late and they don't have other high penalty transactions
                     if ($data->pemakaian && $data->pemakaian->id_users) {
-                        $user = Users::find($data->pemakaian->id_users);
-                        if ($user && $user->status == 'Tidak Aktif') {
-                            // Check if user has other unpaid late transactions before reactivating
-                            $otherLateTransactions = Transaksi::join('pemakaian', 'transaksi.id_pemakaian', '=', 'pemakaian.id_pemakaian')
+                        $user = Users::where('id_users', $data->pemakaian->id_users)
+                            ->where('status', 'Tidak Aktif')
+                            ->first();
+
+                        if ($user) {
+                            // Check if user has other transactions with biaya_telat >= 1000000 before reactivating
+                            $otherHighPenaltyTransactions = Transaksi::join('pemakaian', 'transaksi.id_pemakaian', '=', 'pemakaian.id_pemakaian')
+                                ->join('biaya_denda', 'transaksi.id_biaya_denda', '=', 'biaya_denda.id_biaya_denda')
                                 ->where('pemakaian.id_users', $user->id_users)
                                 ->where('transaksi.id_transaksi', '!=', $id_transaksi)
-                                ->whereNotNull('transaksi.id_biaya_denda')
-                                ->where('transaksi.rp_denda', '>', 0)
+                                ->where('transaksi.status_pembayaran', 'Belum Bayar')
+                                ->where('biaya_denda.biaya_telat', '>=', 1000000)
                                 ->exists();
 
-                            // Only reactivate if no other late transactions exist
-                            if (!$otherLateTransactions) {
+                            // Only reactivate if no other high penalty transactions exist
+                            if (!$otherHighPenaltyTransactions) {
                                 $user->status = 'Aktif';
                                 $user->save();
 
                                 // Log for debugging
-                                \Log::info("User {$user->id_users} status changed back to 'Aktif' - no more late payments");
+                                \Log::info("User {$user->id_users} status changed back to 'Aktif' - no more high penalty transactions (>= Rp 1,000,000)");
                             }
                         }
+                    }
+                } else {
+                    // Log ketika tidak ada denda dan memang tidak perlu denda
+                    if ($daysDifference >= 1) {
+                        \Log::info("Transaction {$id_transaksi} is {$daysDifference} days late but no applicable late fee category found");
+                    } else {
+                        \Log::info("Transaction {$id_transaksi} is not late (days difference: {$daysDifference})");
                     }
                 }
             }
         }
 
-        // Get petugas user data
+        // Get petugas user data (exclude inactive users)
         $petugasUser = null;
         if ($data && $data->pemakaian && $data->pemakaian->petugas) {
-            $petugasUser = Users::find($data->pemakaian->petugas);
+            $petugasUser = Users::where('id_users', $data->pemakaian->petugas)
+                ->where(function ($query) {
+                    $query->where('status', '!=', 'Tidak Aktif')
+                        ->orWhereNull('status');
+                })->first();
         }
 
         return view('belumlunas.edit', compact('data', 'petugasUser'));

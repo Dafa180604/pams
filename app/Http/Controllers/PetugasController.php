@@ -351,6 +351,9 @@ class PetugasController extends Controller
             ->when($filterRT, function ($query, $filterRT) {
                 $query->where('rt', $filterRT);
             })
+            ->orderBy('alamat', 'asc')
+            ->orderBy('rw', 'asc')
+            ->orderBy('rt', 'asc')
             ->get();
 
         // Kelompokkan data berdasarkan alamat, RW, dan RT

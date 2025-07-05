@@ -27,10 +27,10 @@ class PelangganController extends Controller
             })
             ->orderBy('created_at', 'desc') // urutkan dari terbaru
             ->get();
-       
+
         // Ambil data pelanggan secara langsung
         $pelanggan = Users::find($id_users);
-       
+
         // Kumpulkan semua ID petugas dengan penanganan nilai terpisah koma
         $petugasIds = collect();
         foreach ($dataTransaksi as $transaksi) {
@@ -43,13 +43,13 @@ class PelangganController extends Controller
             }
         }
         $petugasIds = $petugasIds->unique()->filter();
-       
+
         // Ambil data petugas dalam satu query
         $petugasUsers = [];
         if ($petugasIds->isNotEmpty()) {
             $petugasUsers = Users::whereIn('id_users', $petugasIds)->get()->keyBy('id_users');
         }
-       
+
         return view('pelanggan.detail', [
             'dataTransaksi' => $dataTransaksi,
             'pelanggan' => $pelanggan,
@@ -127,6 +127,23 @@ class PelangganController extends Controller
             $data->jumlah_air = $request->jumlah_air;
             $data->save();
 
+            // Update akses petugas untuk pelanggan baru
+            $petugas = Users::where('role', 'petugas')
+                ->where('alamat', $request->alamat)
+                ->where('rt', $request->rt)
+                ->where('rw', $request->rw)
+                ->first();
+
+            if ($petugas) {
+                $akses = json_decode($petugas->akses_pelanggan, true) ?: [];
+                // Tambah id_users pelanggan baru ke array akses jika belum ada
+                if (!in_array($idUsers, $akses)) {
+                    $akses[] = $idUsers;
+                    $petugas->akses_pelanggan = json_encode($akses);
+                    $petugas->update();
+                }
+            }
+
             // Jika golongan 'Berbayar', tambahkan entry ke tabel laporan
             if ($request->golongan == 'Berbayar') {
                 // Ambil tarif dari tabel biaya_golongan_berbayar
@@ -182,8 +199,14 @@ class PelangganController extends Controller
         ]);
 
         try {
-            // Simpan golongan lama untuk cek perubahan
+            // Simpan data lama untuk cek perubahan
+            $oldAlamat = $users->alamat;
+            $oldRt = $users->rt;
+            $oldRw = $users->rw;
             $oldGolongan = $users->golongan;
+            $newAlamat = $request->alamat;
+            $newRt = $request->rt;
+            $newRw = $request->rw;
             $newGolongan = $request->golongan;
 
             // Update database lokal
@@ -201,6 +224,45 @@ class PelangganController extends Controller
             $data->golongan = $newGolongan;
             $data->jumlah_air = $request->jumlah_air;
             $data->update();
+
+            // Update akses petugas jika alamat, RT, atau RW berubah
+            if ($oldAlamat != $newAlamat || $oldRt != $newRt || $oldRw != $newRw) {
+                // Hapus akses pelanggan dari petugas wilayah lama (jika ada)
+                if ($oldAlamat && $oldRt && $oldRw) {
+                    $petugasLama = Users::where('role', 'petugas')
+                        ->where('alamat', $oldAlamat)
+                        ->where('rt', $oldRt)
+                        ->where('rw', $oldRw)
+                        ->first();
+
+                    if ($petugasLama && $petugasLama->akses_pelanggan) {
+                        $aksesLama = json_decode($petugasLama->akses_pelanggan, true) ?: [];
+                        // Hapus id_users dari array akses
+                        $aksesLama = array_values(array_filter($aksesLama, function ($id) use ($id_users) {
+                            return $id != $id_users;
+                        }));
+                        $petugasLama->akses_pelanggan = json_encode($aksesLama);
+                        $petugasLama->update();
+                    }
+                }
+
+                // Tambah akses pelanggan ke petugas wilayah baru (jika ada)
+                $petugasBaru = Users::where('role', 'petugas')
+                    ->where('alamat', $newAlamat)
+                    ->where('rt', $newRt)
+                    ->where('rw', $newRw)
+                    ->first();
+
+                if ($petugasBaru) {
+                    $aksesBaru = json_decode($petugasBaru->akses_pelanggan, true) ?: [];
+                    // Tambah id_users ke array akses jika belum ada
+                    if (!in_array($id_users, $aksesBaru)) {
+                        $aksesBaru[] = $id_users;
+                        $petugasBaru->akses_pelanggan = json_encode($aksesBaru);
+                        $petugasBaru->update();
+                    }
+                }
+            }
 
             // Cek perubahan golongan
             if ($oldGolongan != $newGolongan) {
