@@ -1,5 +1,5 @@
 <?php
-
+//php artisan denda:reset-cache --today 
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;

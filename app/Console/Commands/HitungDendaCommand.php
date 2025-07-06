@@ -515,7 +515,7 @@ private function sendUserDendaNotification($transaksi, $daysDifference, $rpDenda
         $isUserDeactivated = ($user->status == 'Tidak Aktif');
 
         // Siapkan pesan WhatsApp berdasarkan kondisi
-        if ($isMaxDenda && $isUserDeactivated) {
+        if ($isMaxDenda && !$isUserDeactivated) {
             // NOTIFIKASI KHUSUS: LAYANAN TELAH DINONAKTIFKAN
             $message = "🔴 *LAYANAN TELAH DINONAKTIFKAN* 🔴\n\n";
             $message .= "Halo *{$userName}*,\n\n";
@@ -545,32 +545,32 @@ private function sendUserDendaNotification($transaksi, $daysDifference, $rpDenda
             // $message .= "Jangan tunda lagi! Hubungi kami sekarang untuk proses reaktivasi.\n\n";
             $message .= "Terima kasih atas pengertiannya! 🙏";
             
-        } elseif ($isMaxDenda && !$isUserDeactivated) {
-            // NOTIFIKASI KHUSUS: DENDA MAKSIMAL TAPI BELUM DINONAKTIFKAN
-            $message = "🚨 *DENDA MAKSIMAL - LAYANAN AKAN DINONAKTIFKAN* 🚨\n\n";
-            $message .= "Halo *{$userName}*,\n\n";
-            $message .= "⚠️ **PERINGATAN KRITIS:** Denda keterlambatan Anda telah mencapai **BATAS MAKSIMAL**!\n";
-            $message .= "Layanan akan dinonaktifkan dalam waktu dekat jika tidak segera dibayar.\n\n";
-            $message .= "*Detail Tagihan & Denda:*\n";
-            $message .= "=====================================\n";
-            $message .= "*ID Transaksi:* {$transaksi->id_transaksi}\n";
-            $message .= "*Periode:* " . date('F Y', strtotime($transaksi->pemakaian->waktu_catat)) . "\n";
-            $message .= "*Tagihan Pokok:* Rp " . number_format($transaksi->jumlah_rp - $rpDenda, 0, ',', '.') . "\n";
-            $message .= "*Denda Maksimal:* Rp " . number_format($rpDenda, 0, ',', '.') . "\n";
-            $message .= "*Total Tagihan:* Rp " . number_format($transaksi->jumlah_rp, 0, ',', '.') . "\n";
-            $message .= "*Terlambat:* {$daysDifference} hari\n\n";
+        // } elseif ($isMaxDenda && !$isUserDeactivated) {
+        //     // NOTIFIKASI KHUSUS: DENDA MAKSIMAL TAPI BELUM DINONAKTIFKAN
+        //     $message = "🚨 *DENDA MAKSIMAL - LAYANAN AKAN DINONAKTIFKAN* 🚨\n\n";
+        //     $message .= "Halo *{$userName}*,\n\n";
+        //     $message .= "⚠️ **PERINGATAN KRITIS:** Denda keterlambatan Anda telah mencapai **BATAS MAKSIMAL**!\n";
+        //     $message .= "Layanan akan dinonaktifkan dalam waktu dekat jika tidak segera dibayar.\n\n";
+        //     $message .= "*Detail Tagihan & Denda:*\n";
+        //     $message .= "=====================================\n";
+        //     $message .= "*ID Transaksi:* {$transaksi->id_transaksi}\n";
+        //     $message .= "*Periode:* " . date('F Y', strtotime($transaksi->pemakaian->waktu_catat)) . "\n";
+        //     $message .= "*Tagihan Pokok:* Rp " . number_format($transaksi->jumlah_rp - $rpDenda, 0, ',', '.') . "\n";
+        //     $message .= "*Denda Maksimal:* Rp " . number_format($rpDenda, 0, ',', '.') . "\n";
+        //     $message .= "*Total Tagihan:* Rp " . number_format($transaksi->jumlah_rp, 0, ',', '.') . "\n";
+        //     $message .= "*Terlambat:* {$daysDifference} hari\n\n";
             
-            $message .= "🔴 **RISIKO DEAKTIVASI:**\n";
-            $message .= "• Layanan akan dinonaktifkan segera\n";
-            $message .= "• Aliran air akan dihentikan\n";
-            $message .= "• Proses reaktivasi diperlukan\n";
-            $message .= "• Biaya tambahan mungkin dikenakan\n\n";
+        //     $message .= "🔴 **RISIKO DEAKTIVASI:**\n";
+        //     $message .= "• Layanan akan dinonaktifkan segera\n";
+        //     $message .= "• Aliran air akan dihentikan\n";
+        //     $message .= "• Proses reaktivasi diperlukan\n";
+        //     $message .= "• Biaya tambahan mungkin dikenakan\n\n";
             
-            $message .= "💡 **HINDARI DEAKTIVASI:**\n";
-            $message .= "**SEGERA LAKUKAN PEMBAYARAN SEKARANG JUGA!**\n";
-            $message .= "Total yang harus dibayar: Rp " . number_format($transaksi->jumlah_rp, 0, ',', '.') . "\n\n";
+        //     $message .= "💡 **HINDARI DEAKTIVASI:**\n";
+        //     $message .= "**SEGERA LAKUKAN PEMBAYARAN SEKARANG JUGA!**\n";
+        //     $message .= "Total yang harus dibayar: Rp " . number_format($transaksi->jumlah_rp, 0, ',', '.') . "\n\n";
             
-            $message .= "Hubungi customer service jika memerlukan bantuan. Terima kasih! 🙏";
+        //     $message .= "Hubungi customer service jika memerlukan bantuan. Terima kasih! 🙏";
             
         } else {
             // NOTIFIKASI BIASA: DENDA BELUM MAKSIMAL
