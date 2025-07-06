@@ -14,91 +14,108 @@ use Illuminate\Support\Str;
 class AuthController extends Controller
 {
     public function login(Request $request)
-    {
-        // Validasi input
-        $request->validate([
-            'username' => 'required|string',
-            'password' => 'required|string',
-        ]);
+{
+    // Validasi input
+    $request->validate([
+        'username' => 'required|string',
+        'password' => 'required|string',
+    ]);
 
-        // Cek throttle untuk API
-        $throttleKey = $this->apiThrottleKey($request);
+    // Cek throttle untuk API
+    $throttleKey = $this->apiThrottleKey($request);
+    
+    // Cek apakah sudah mencapai limit
+    if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+        $seconds = RateLimiter::availableIn($throttleKey);
+        $minutes = ceil($seconds / 60);
         
-        // Cek apakah sudah mencapai limit
-        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
-            $seconds = RateLimiter::availableIn($throttleKey);
-            $minutes = ceil($seconds / 60);
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Terlalu banyak percobaan login. Silakan coba lagi dalam ' . $minutes . ' menit.',
-                'error_code' => 'TOO_MANY_ATTEMPTS',
-                'retry_after_seconds' => $seconds,
-                'retry_after_minutes' => $minutes,
-            ], 429); // HTTP 429 Too Many Requests
-        }
-
-        // Cari user berdasarkan username
-        $user = Users::where('username', $request->username)->first();
-
-        // Jika user tidak ditemukan
-        if (!$user) {
-            // Increment throttle untuk username tidak valid
-            RateLimiter::hit($throttleKey, 60);
-            
-            $attempts = RateLimiter::attempts($throttleKey);
-            $remainingAttempts = 5 - $attempts;
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Username tidak terdaftar!',
-                'error_code' => 'USERNAME_NOT_FOUND',
-                'remaining_attempts' => max(0, $remainingAttempts),
-            ], 401);
-        }
-
-        // Coba login
-        if (Auth::attempt(['username' => $request->username, 'password' => $request->password])) {
-            // Login berhasil - clear throttle
-            RateLimiter::clear($throttleKey);
-            
-            $user = Auth::user();
-
-            // Generate token menggunakan Laravel Sanctum
-            $token = $user->createToken('MobileApp', ['*'], now()->addDays(30))->plainTextToken;
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Login berhasil sebagai ' . $user->role,
-                'data' => [
-                    'id' => $user->id_users,
-                    'nama' => $user->nama,
-                    'alamat' => $user->alamat,
-                    'no_hp' => $user->no_hp,
-                    'username' => $user->username,
-                    'role' => $user->role,
-                    'foto_profile' => $user->foto_profile,
-                    'login_at' => now()->toISOString(),
-                ],
-                'token' => $token,
-                'token_type' => 'Bearer',
-                'expires_in' => 30 * 24 * 60 * 60, // 30 hari dalam detik
-            ]);
-        } else {
-            // Password salah - increment throttle
-            RateLimiter::hit($throttleKey, 60);
-            
-            $attempts = RateLimiter::attempts($throttleKey);
-            $remainingAttempts = 5 - $attempts;
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Password salah!',
-                'error_code' => 'INVALID_PASSWORD',
-                'remaining_attempts' => max(0, $remainingAttempts),
-            ], 401);
-        }
+        return response()->json([
+            'success' => false,
+            'message' => 'Terlalu banyak percobaan login. Silakan coba lagi dalam ' . $minutes . ' menit.',
+            'error_code' => 'TOO_MANY_ATTEMPTS',
+            'retry_after_seconds' => $seconds,
+            'retry_after_minutes' => $minutes,
+        ], 429); // HTTP 429 Too Many Requests
     }
+
+    // Cari user berdasarkan username dengan filter status Aktif
+    $user = Users::where('username', $request->username)
+                 ->where('status', 'Aktif')
+                 ->first();
+
+    // Jika user tidak ditemukan atau tidak aktif
+    if (!$user) {
+        // Increment throttle untuk username tidak valid atau tidak aktif
+        RateLimiter::hit($throttleKey, 60);
+        
+        $attempts = RateLimiter::attempts($throttleKey);
+        $remainingAttempts = 5 - $attempts;
+
+        // Cek apakah user ada tapi tidak aktif
+        $userExists = Users::where('username', $request->username)->first();
+        if ($userExists && $userExists->status !== 'Aktif') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akun Anda tidak aktif. Silakan hubungi administrator.',
+                'error_code' => 'ACCOUNT_INACTIVE',
+                'remaining_attempts' => max(0, $remainingAttempts),
+            ], 401);
+        }
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Username tidak terdaftar!',
+            'error_code' => 'USERNAME_NOT_FOUND',
+            'remaining_attempts' => max(0, $remainingAttempts),
+        ], 401);
+    }
+
+    // Coba login dengan tambahan kondisi status
+    if (Auth::attempt([
+        'username' => $request->username, 
+        'password' => $request->password,
+        'status' => 'Aktif'
+    ])) {
+        // Login berhasil - clear throttle
+        RateLimiter::clear($throttleKey);
+        
+        $user = Auth::user();
+
+        // Generate token menggunakan Laravel Sanctum
+        $token = $user->createToken('MobileApp', ['*'], now()->addDays(30))->plainTextToken;
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Login berhasil sebagai ' . $user->role,
+            'data' => [
+                'id' => $user->id_users,
+                'nama' => $user->nama,
+                'alamat' => $user->alamat,
+                'no_hp' => $user->no_hp,
+                'username' => $user->username,
+                'role' => $user->role,
+                'foto_profile' => $user->foto_profile,
+                'login_at' => now()->toISOString(),
+            ],
+            'token' => $token,
+            'token_type' => 'Bearer',
+            'expires_in' => 30 * 24 * 60 * 60, // 30 hari dalam detik
+        ]);
+    } else {
+        // Password salah - increment throttle
+        RateLimiter::hit($throttleKey, 60);
+        
+        $attempts = RateLimiter::attempts($throttleKey);
+        $remainingAttempts = 5 - $attempts;
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Password salah!',
+            'error_code' => 'INVALID_PASSWORD',
+            'remaining_attempts' => max(0, $remainingAttempts),
+        ], 401);
+    }
+}
 
     /**
      * Get the rate limiting throttle key for API requests.

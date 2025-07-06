@@ -18,89 +18,90 @@ use App\Models\Laporan;
 class PemakaianController extends Controller
 {
     public function index(Request $request)
-    {
-        $perPage = $request->get('per_page', 10); // default 10
-        $search = $request->get('search');
-        $userId = $request->get('id_users'); // tangkap id dari query jika ada
+{
+    $perPage = $request->get('per_page', 10); // default 10
+    $search = $request->get('search');
+    $userId = $request->get('id_users'); // tangkap id dari query jika ada
 
-        // Ambil user yang login
-        $authUser = Auth::user();
+    // Ambil user yang login
+    $authUser = Auth::user();
 
-        // Pastikan akses_pelanggan adalah array (misal disimpan sebagai JSON string di DB)
-        $aksesPelanggan = json_decode($authUser->akses_pelanggan, true);
+    // Pastikan akses_pelanggan adalah array (misal disimpan sebagai JSON string di DB)
+    $aksesPelanggan = json_decode($authUser->akses_pelanggan, true);
 
-        // Jika akses_pelanggan kosong/null, anggap sebagai tidak ada akses
-        if (empty($aksesPelanggan) || !is_array($aksesPelanggan)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Tidak memiliki akses ke data pelanggan',
-                'data' => []
-            ], 403);
-        }
-
-        // Validasi jika ada pencarian berdasarkan id_users, pastikan id_users termasuk akses_pelanggan
-        if ($userId && !in_array($userId, $aksesPelanggan)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Anda tidak memiliki akses ke pelanggan ini',
-                'data' => []
-            ], 403);
-        }
-
-        $query = Users::where('role', 'pelanggan')
-            ->whereIn('id_users', $aksesPelanggan); // Batasi hanya pelanggan yang diizinkan
-
-        // Jika ada pencarian berdasarkan nama/alamat/no_hp
-        if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('nama', 'like', "%{$search}%")
-                ->orWhere('alamat', 'like', "%{$search}%")
-                ->orWhere('no_hp', 'like', "%{$search}%");
-            });
-        }
-
-        // Jika ada pencarian berdasarkan id_users
-        if ($userId) {
-            $query->where('id_users', $userId);
-        }
-
-        $users = $query->paginate($perPage);
-
-        // Mapping data user
-        $mapped = $users->getCollection()->map(function ($user) {
-            $penggunaanTerakhir = Pemakaian::where('id_users', $user->id_users)->latest()->first();
-            $defaultValue = $user->jumlah_air ?? 0;
-
-            // Cek apakah sudah dicatat di bulan ini
-            $sudahDicatatBulanIni = false;
-            if ($penggunaanTerakhir && $penggunaanTerakhir->waktu_catat) {
-                $catatDate = \Carbon\Carbon::parse($penggunaanTerakhir->waktu_catat);
-                $sudahDicatatBulanIni = $catatDate->isSameMonth(now());
-            }
-
-            return [
-                'id_users' => $user->id_users,
-                'nama' => $user->nama,
-                'alamat' => $user->alamat,
-                'rw' => $user->rw,
-                'rt' => $user->rt,
-                'no_hp' => $user->no_hp,
-                'jumlah_air' => $defaultValue,
-                'meter_akhir' => $penggunaanTerakhir ? $penggunaanTerakhir->meter_akhir : $defaultValue,
-                'waktu_catat' => $penggunaanTerakhir ? $penggunaanTerakhir->waktu_catat : null,
-                'sudah_dicatat_bulan_ini' => $sudahDicatatBulanIni,
-            ];
-        });
-
-        // Set kembali collection hasil map
-        $users->setCollection($mapped);
-
+    // Jika akses_pelanggan kosong/null, anggap sebagai tidak ada akses
+    if (empty($aksesPelanggan) || !is_array($aksesPelanggan)) {
         return response()->json([
-            'success' => true,
-            'message' => 'Data pemakaian berhasil diambil',
-            'data' => $users
-        ]);
+            'success' => false,
+            'message' => 'Tidak memiliki akses ke data pelanggan',
+            'data' => []
+        ], 403);
     }
+
+    // Validasi jika ada pencarian berdasarkan id_users, pastikan id_users termasuk akses_pelanggan
+    if ($userId && !in_array($userId, $aksesPelanggan)) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Anda tidak memiliki akses ke pelanggan ini',
+            'data' => []
+        ], 403);
+    }
+
+    $query = Users::where('role', 'pelanggan')
+        ->where('status', 'Aktif') // Tambahkan filter status Aktif
+        ->whereIn('id_users', $aksesPelanggan); // Batasi hanya pelanggan yang diizinkan
+
+    // Jika ada pencarian berdasarkan nama/alamat/no_hp
+    if ($search) {
+        $query->where(function ($q) use ($search) {
+            $q->where('nama', 'like', "%{$search}%")
+            ->orWhere('alamat', 'like', "%{$search}%")
+            ->orWhere('no_hp', 'like', "%{$search}%");
+        });
+    }
+
+    // Jika ada pencarian berdasarkan id_users
+    if ($userId) {
+        $query->where('id_users', $userId);
+    }
+
+    $users = $query->paginate($perPage);
+
+    // Mapping data user
+    $mapped = $users->getCollection()->map(function ($user) {
+        $penggunaanTerakhir = Pemakaian::where('id_users', $user->id_users)->latest()->first();
+        $defaultValue = $user->jumlah_air ?? 0;
+
+        // Cek apakah sudah dicatat di bulan ini
+        $sudahDicatatBulanIni = false;
+        if ($penggunaanTerakhir && $penggunaanTerakhir->waktu_catat) {
+            $catatDate = \Carbon\Carbon::parse($penggunaanTerakhir->waktu_catat);
+            $sudahDicatatBulanIni = $catatDate->isSameMonth(now());
+        }
+
+        return [
+            'id_users' => $user->id_users,
+            'nama' => $user->nama,
+            'alamat' => $user->alamat,
+            'rw' => $user->rw,
+            'rt' => $user->rt,
+            'no_hp' => $user->no_hp,
+            'jumlah_air' => $defaultValue,
+            'meter_akhir' => $penggunaanTerakhir ? $penggunaanTerakhir->meter_akhir : $defaultValue,
+            'waktu_catat' => $penggunaanTerakhir ? $penggunaanTerakhir->waktu_catat : null,
+            'sudah_dicatat_bulan_ini' => $sudahDicatatBulanIni,
+        ];
+    });
+
+    // Set kembali collection hasil map
+    $users->setCollection($mapped);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Data pemakaian berhasil diambil',
+        'data' => $users
+    ]);
+}
 
     // Method untuk menyimpan data pemakaian
     public function store(Request $request)
