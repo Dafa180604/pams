@@ -19,6 +19,7 @@ class DashboardAdminController extends Controller
         // Count customers (users with role 'pelanggan')
         $customerCount = DB::table('users')
             ->where('role', 'pelanggan')
+            ->where('status', 'Aktif')
             ->whereNull('deleted_at')
             ->count();
             
