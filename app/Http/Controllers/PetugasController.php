@@ -143,6 +143,7 @@ class PetugasController extends Controller
             $data->username = $request->username;
             $data->password = $passwordToStore;
             $data->role = 'petugas';
+            $data->status = 'Aktif';
             // $data->golongan = $request->golongan;
             // $data->jumlah_air = $request->jumlah_air;
             $data->foto_profile = null; // Default ke null

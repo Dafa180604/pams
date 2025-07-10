@@ -8,14 +8,23 @@ use App\Models\BiayaDenda;
 class DendaController extends Controller
 {
     public function index()
-    {
-        $dataBiayaDenda = BiayaDenda::orderBy('jumlah_telat', 'asc')->get();
+{
+    $dataBiayaDenda = BiayaDenda::orderBy('jumlah_telat', 'asc')->get();
+   
+    // Cek apakah data terakhir memiliki biaya_telat = 1000000 (denda maksimal)
+    $hasMaxDenda = false;
+    if ($dataBiayaDenda->isNotEmpty()) {
+        $lastData = $dataBiayaDenda->last();
+        $hasMaxDenda = ($lastData->biaya_telat == 1000000);
         
-        // Cek apakah sudah ada data yang ditandai maksimal melalui session/cache
-        $hasMaxDenda = session('denda_maksimal_set', false);
-        
-        return view('BiayaDenda.index', compact('dataBiayaDenda', 'hasMaxDenda'));
+        // Set session untuk ID denda maksimal jika kondisi terpenuhi
+        if ($hasMaxDenda) {
+            session(['denda_maksimal_id' => $lastData->id_biaya_denda]);
+        }
     }
+   
+    return view('BiayaDenda.index', compact('dataBiayaDenda', 'hasMaxDenda'));
+}
 
     public function create()
     {
