@@ -9,7 +9,7 @@ class Transaksi extends Model
     use HasFactory;
     protected $table = 'transaksi';
     protected $primaryKey = 'id_transaksi';
-    protected $fillable = ['id_transaksi','jumlah_rp', 'status_pembayaran','rp_denda', 'tgl_pembayaran', 'uang_bayar' ,'kembalian','detail_biaya'];
+    protected $fillable = ['id_transaksi','rp_pengampunan','jumlah_rp', 'status_pembayaran','rp_denda', 'tgl_pembayaran', 'uang_bayar' ,'kembalian','detail_biaya'];
 
     public function pemakaian()
     {

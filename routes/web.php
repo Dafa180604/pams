@@ -19,6 +19,8 @@ use App\Http\Controllers\BebanBiayaController;
 use App\Http\Controllers\GolonganController;
 use App\Http\Controllers\PelangganController;
 use App\Http\Controllers\DendaController;
+use App\Http\Controllers\PelunasanController;
+use App\Http\Controllers\RiwayatPemulihan;
 
 Route::get('/', [AuthController::class, 'login'])->name('login');
 Route::post('loginsukses', [AuthController::class, 'loginsukses'])
@@ -52,9 +54,14 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/lunas/cetak/{id_transaksi}', [LunasController::class, 'cetak'])->name('lunas.cetak');
 
         Route::resource('/pemakaian', PemakaianController::class);
+        Route::resource('/pelunasan', PelunasanController::class);// Tambahkan route ini ke web.php
+        Route::post('/proses-pelunasan', [PelunasanController::class, 'prosesPelunasan']);
+        Route::get('/cetak-struk', [PelunasanController::class, 'cetakStruk'])->name('cetak.struk');
         Route::get('/pemakaian/{id_users}/meter-akhir', [PemakaianController::class, 'getMeterAkhir']);
         //
         Route::post('pemakaian/bayar', [PemakaianController::class, 'bayar'])->name('pemakaian.bayar');
+        Route::get('/pemulihan/riwayat', [RiwayatPemulihan::class, 'index'])->name('pemulihan.riwayat');
+
     });
     Route::resource('/pengeluaran', PengeluaranController::class);
     Route::resource('/laporan', LaporanController::class);

@@ -15,7 +15,7 @@ class Users extends Authenticatable
     use HasApiTokens;
     protected $table = 'users';
     protected $primaryKey = 'id_users';
-    protected $fillable = ['id_users', 'nama', 'alamat', 'rw', 'rt', 'no_hp', 'username', 'password', 'role', 'foto_profile', 'golongan', 'status', 'jumlah_air', 'akses_pelanggan'];
+    protected $fillable = ['id_users', 'nama', 'alamat', 'rw', 'rt', 'no_hp', 'username', 'password', 'role', 'foto_profile', 'golongan', 'status', 'jumlah_air','jadwal_keinginan_bayar', 'akses_pelanggan'];
     // Model Users
     public function pemakaian()
     {

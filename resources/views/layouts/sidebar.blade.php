@@ -63,6 +63,12 @@
       </li>
       <li class="nav-item nav-category">Transaksi</li>
       <li class="nav-item">
+        {{-- <a href="{{route('pelunasan.index')}}" class="nav-link {{ Request::routeIs('pelanggan.*') ? 'active' : '' }}">
+          <i class="link-icon" data-feather="droplet"></i>
+          <span class="link-title">Data Pemakaian</span>
+        </a> --}}
+      </li>
+      <li class="nav-item">
         <a class="nav-link" data-bs-toggle="collapse" href="#transaksi" role="button" aria-expanded="{{ Request::routeIs('belumlunas.*', 'lunas.*') ? 'true' : 'false' }}"
           aria-controls="transaksi">
           <i class="link-icon" data-feather="mail"></i>
@@ -72,10 +78,13 @@
         <div class="collapse {{ Request::routeIs('belumlunas.*', 'lunas.*') ? 'show' : '' }}" id="transaksi">
           <ul class="nav sub-menu">
             <li class="nav-item">
-              <a href="{{route('belumlunas.index')}}" class="nav-link {{ Request::routeIs('belumlunas.*') ? 'active' : '' }}">Belum Lunas</a>
+              <a href="{{route('pelunasan.index')}}" class="nav-link {{ Request::routeIs('pelunasan.*') ? 'active' : '' }}">Belum Lunas</a>
             </li>
             <li class="nav-item">
               <a href="{{route('lunas.index')}}" class="nav-link {{ Request::routeIs('lunas.*') ? 'active' : '' }}">Lunas</a>
+            </li>
+            <li class="nav-item">
+              <a href="{{ route('pemulihan.riwayat') }}" class="nav-link {{ Request::routeIs('lunas.*') ? 'active' : '' }}">Riwayat Pemulihan</a>
             </li>
           </ul>
         </div>

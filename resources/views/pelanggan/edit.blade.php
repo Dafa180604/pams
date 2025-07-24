@@ -138,8 +138,7 @@
                                 </div>
                             </div>
                         </div>
-
-                        <div class="mt-3">
+                                                <div class="mt-3">
                             <a href="{{ route('pelanggan.index') }}" class="btn btn-secondary me-2">Batal</a>
                             <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
                         </div>

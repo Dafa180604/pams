@@ -100,7 +100,7 @@
                                                 @if($isTerimalBayarPetugas)
                                                     <div class="keterangan-content">
                                                         <span class="main-keterangan">{{ $cleanKeterangan }}</span>
-                                                        <div class="status-section mt-2">
+                                                        {{-- <div class="status-section mt-2">
                                                             @if($sudahDiterima)
                                                                 <span class="badge bg-success me-2">Diterima</span>
                                                             @else
@@ -132,7 +132,7 @@
                                                                     @endif
                                                                 </ul>
                                                             </div>
-                                                        </div>
+                                                        </div> --}}
                                                     </div>
                                                 @else
                                                     {{ $data->keterangan }}

@@ -59,8 +59,9 @@ class DashboardController extends Controller
     $totalBelumDicatat = collect($pelangganAktif)->diff($dicatatIds)->count();
 
     // Total uang tetap seperti sebelumnya (yang Lunas)
-    $totalUang = $transaksi->where('status_pembayaran', 'Lunas')->sum('jumlah_rp');
-
+   // $totalUang = $transaksi->where('status_pembayaran', 'Lunas')->sum('jumlah_rp');
+// Ubah logika total uang: total harus dicatat - total belum dicatat
+$totalUang = $totalHarusDicatat - $totalBelumDicatat;
     // Hitung jumlah keluhan untuk tambahan info
     $jumlahKeluhan = Keluhan::count();
 

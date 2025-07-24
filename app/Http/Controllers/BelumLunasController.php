@@ -8,6 +8,7 @@ use App\Models\Transaksi;
 use App\Models\Users;
 use Illuminate\Http\Request;
 use App\Models\BiayaDenda;
+use App\Models\MaksimalDenda;
 use DateTime;
 class BelumLunasController extends Controller
 {
@@ -325,9 +326,28 @@ class BelumLunasController extends Controller
                         ->orWhereNull('status');
                 })->first();
         }
-
-        return view('belumlunas.edit', compact('data', 'petugasUser'));
-    }
+        $totalPengampunanUser = 0;
+        if ($data && $data->pemakaian && $data->pemakaian->id_users) {
+            $totalPengampunanUser = Transaksi::join('pemakaian', 'transaksi.id_pemakaian', '=', 'pemakaian.id_pemakaian')
+                ->where('pemakaian.id_users', $data->pemakaian->id_users)
+                ->sum('transaksi.rp_pengampunan');
+        }
+        
+        // Hitung pengampunan yang akan diberikan (dari transaksi saat ini)
+        $pengampunanSekarang = 0;
+        if (isset($detailBiaya['denda']) && $detailBiaya['denda']['rp_denda'] > 0) {
+            $pengampunanSekarang = $detailBiaya['denda']['rp_denda'];
+        }
+        
+        // Cek apakah total pengampunan + pengampunan sekarang melebihi batas maksimal 20,000
+        $batasMaksimalPengampunan = MaksimalDenda::first()->jumlah_maksimal ?? 20000;
+        $totalPengampunanSetelahIni = $totalPengampunanUser + $pengampunanSekarang;
+        $bisaDiampuni = $totalPengampunanSetelahIni <= $batasMaksimalPengampunan;
+        
+        // Hitung sisa kuota pengampunan
+        $sisaKuotaPengampunan = $batasMaksimalPengampunan - $totalPengampunanUser;
+        
+        return view('belumlunas.edit', compact('data', 'petugasUser', 'totalPengampunanUser', 'bisaDiampuni', 'sisaKuotaPengampunan', 'batasMaksimalPengampunan')); }
     /**
      * Update the specified resource in storage.
      */
@@ -357,6 +377,10 @@ class BelumLunasController extends Controller
 
                     // Pastikan jumlah_rp - rp_denda tidak negatif
                     $jumlahRpFinal = max(0, $transaksi->jumlah_rp - $dendaAmount);
+
+                    // SIMPAN DENDA YANG DIAMPUNI KE KOLOM rp_pengampunan
+                    $transaksi->rp_pengampunan = $dendaAmount;
+                    \Log::info("Saving forgiven late fee to rp_pengampunan: Rp " . number_format($dendaAmount));
 
                     // Simpan denda asli untuk riwayat
                     $detailBiaya['denda']['rp_denda_asli'] = $detailBiaya['denda']['rp_denda'];

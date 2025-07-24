@@ -20,8 +20,8 @@
                                 <div class="col-sm-6">
                                     <div class="mb-3">
                                         <label class="form-label">Nama</label>
-                                        <input type="text" name="nama" class="form-control" placeholder="Masukkan Nama"
-                                            value="{{ old('nama') }}">
+                                        <input type="text" name="nama" class="form-control"
+                                            placeholder="Masukkan Nama" value="{{ old('nama') }}">
                                         @error('nama')
                                             <div class="text-danger">{{ $message }}</div>
                                         @enderror
@@ -38,7 +38,8 @@
                                                 Pulorjo</option>
                                             <option value="Babadan" {{ old('alamat') == 'Babadan' ? 'selected' : '' }}>
                                                 Babadan</option>
-                                            <option value="Tenggerlor" {{ old('alamat') == 'Tenggerlor' ? 'selected' : '' }}>
+                                            <option value="Tenggerlor"
+                                                {{ old('alamat') == 'Tenggerlor' ? 'selected' : '' }}>
                                                 Tenggerlor</option>
                                             <option value="Wangkal" {{ old('alamat') == 'Wangkal' ? 'selected' : '' }}>
                                                 Wangkal</option>
@@ -54,8 +55,8 @@
                                 <div class="col-sm-6">
                                     <div class="mb-3">
                                         <label class="form-label">No HP</label>
-                                        <input type="text" name="no_hp" class="form-control" placeholder="Masukkan Nomor HP"
-                                            value="{{ old('no_hp') }}">
+                                        <input type="text" name="no_hp" class="form-control"
+                                            placeholder="Masukkan Nomor HP" value="{{ old('no_hp') }}">
                                         @error('no_hp')
                                             <div class="text-danger">{{ $message }}</div>
                                         @enderror
@@ -69,7 +70,8 @@
                                                 <select name="rt" class="form-control">
                                                     <option value="">Pilih RT</option>
                                                     @for ($i = 1; $i <= 10; $i++)
-                                                        <option value="{{ $i }}" {{ old('rt') == $i ? 'selected' : '' }}>
+                                                        <option value="{{ $i }}"
+                                                            {{ old('rt') == $i ? 'selected' : '' }}>
                                                             {{ $i }}</option>
                                                     @endfor
                                                 </select>
@@ -84,7 +86,8 @@
                                                 <select name="rw" class="form-control">
                                                     <option value="">Pilih RW</option>
                                                     @for ($i = 1; $i <= 10; $i++)
-                                                        <option value="{{ $i }}" {{ old('rw') == $i ? 'selected' : '' }}>
+                                                        <option value="{{ $i }}"
+                                                            {{ old('rw') == $i ? 'selected' : '' }}>
                                                             {{ $i }}</option>
                                                     @endfor
                                                 </select>
@@ -103,7 +106,7 @@
                                         <label class="form-label">Username</label>
                                         <input type="text" name="username" class="form-control"
                                             placeholder="Masukkan Username" value="{{ old('username') }}">
-                                            <small class="text-muted">Password Default: PelangganPams</small>
+                                        <small class="text-muted">Password Default: PelangganPams</small>
                                         @error('username')
                                             <div class="text-danger">{{ $message }}</div>
                                         @enderror
@@ -137,6 +140,7 @@
                                         @enderror
                                     </div>
                                 </div>
+                                
                             </div>
 
                             <div class="mt-3">

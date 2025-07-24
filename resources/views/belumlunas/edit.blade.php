@@ -36,12 +36,13 @@
                                         <div class="mb-2 flex">
                                             <span class="text-muted w-32">Petugas:</span>
                                             <span class="fw-bold">
-                                                @if($petugasUser)
+                                                @if ($petugasUser)
                                                     {{ $petugasUser->nama }}
                                                 @else
                                                     @php
                                                         $petugasId = $data->pemakaian->petugas;
-                                                        $user = DB::table('users')->where('id_users', $petugasId)
+                                                        $user = DB::table('users')
+                                                            ->where('id_users', $petugasId)
                                                             ->orWhere('id_users', $petugasId)
                                                             ->first();
                                                         echo $user ? $user->nama : $petugasId;
@@ -96,7 +97,7 @@
                                                 </tr>
 
                                                 <!-- Tampilkan semua kategori yang digunakan -->
-                                                @foreach($kategoriList as $kategori)
+                                                @foreach ($kategoriList as $kategori)
                                                     <tr>
                                                         <th class="text-muted">{{ $kategori['volume'] }} m³ × Rp
                                                             {{ number_format($kategori['tarif'], 0, ',', '.') }}
@@ -130,16 +131,43 @@
                             </div>
                         </div>
 
-                        @if(isset($detailBiaya['denda']) && $detailBiaya['denda']['rp_denda'] > 0)
+                        @if (isset($detailBiaya['denda']) && $detailBiaya['denda']['rp_denda'] > 0)
                             <div class="mb-3">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="pemulihan_denda" name="pemulihan_denda"
-                                        value="1" style="transform: scale(1.2);">
-                                    <label class="form-check-label fw-semibold text-success ms-2" for="pemulihan_denda">
-                                        <i class="mdi mdi-gift me-1"></i>Berikan Pemulihan/Pengampunan Denda
-                                        <small class="text-muted d-block">Denda sebesar Rp {{ number_format($detailBiaya['denda']['rp_denda'], 0, ',', '.') }} akan diampuni</small>
-                                    </label>
-                                </div>
+                                @if ($bisaDiampuni)
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="pemulihan_denda"
+                                            name="pemulihan_denda" value="1" style="transform: scale(1.2);">
+                                        <label class="form-check-label fw-semibold text-success ms-2" for="pemulihan_denda">
+                                            <i class="mdi mdi-gift me-1"></i>Berikan Pemulihan/Pengampunan Denda
+                                            <small class="text-muted d-block">
+                                                Denda sebesar Rp
+                                                {{ number_format($detailBiaya['denda']['rp_denda'], 0, ',', '.') }} akan
+                                                diampuni
+                                            </small>
+                                            <small class="text-info d-block">
+                                                <i class="mdi mdi-information me-1"></i>
+                                                Pengampunan yang sudah diberikan: Rp
+                                                {{ number_format($totalPengampunanUser, 0, ',', '.') }}
+                                                | Sisa kuota: Rp {{ number_format($sisaKuotaPengampunan, 0, ',', '.') }}
+                                            </small>
+                                        </label>
+                                    </div>
+                                @else
+                                    <div class="alert alert-warning">
+                                        <i class="mdi mdi-alert-circle me-0"></i>
+                                        <strong>Pengampunan denda tidak dapat diberikan</strong>
+                                        <p class="mb-1">Batas maksimal pengampunan denda sebesar Rp
+                                            {{ number_format($batasMaksimalPengampunan, 0, ',', '.') }} telah tercapai.</p>
+                                        <small class="text-muted">
+                                            Pengampunan yang sudah diberikan: Rp
+                                            {{ number_format($totalPengampunanUser, 0, ',', '.') }}
+                                            | Pengampunan yang akan diberikan: Rp
+                                            {{ number_format($detailBiaya['denda']['rp_denda'], 0, ',', '.') }}
+                                            | Total: Rp
+                                            {{ number_format($totalPengampunanUser + $detailBiaya['denda']['rp_denda'], 0, ',', '.') }}
+                                        </small>
+                                    </div>
+                                @endif
                             </div>
                         @endif
 
@@ -182,8 +210,8 @@
                                                     <span class="input-group-text bg-indigo-600 text-white"
                                                         style="background-color: #6366f1;"><i
                                                             class="mdi mdi-cash-return"></i></span>
-                                                    <input type="text" id="kembalian" name="kembalian" class="form-control"
-                                                        readonly>
+                                                    <input type="text" id="kembalian" name="kembalian"
+                                                        class="form-control" readonly>
                                                 </div>
                                             </div>
                                         </div>
@@ -211,7 +239,7 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', function() {
             const uangBayarInput = document.getElementById('uang_bayar');
             const jumlahRpInput = document.getElementById('jumlah_rp');
             const kembalianInput = document.getElementById('kembalian');
@@ -233,30 +261,31 @@
             let currentTotal = originalTotal;
 
             // Ambil nilai denda dari detail biaya jika ada
-            @if(isset($detailBiaya['denda']) && $detailBiaya['denda']['rp_denda'] > 0)
+            @if (isset($detailBiaya['denda']) && $detailBiaya['denda']['rp_denda'] > 0)
                 dendaAmount = {{ $detailBiaya['denda']['rp_denda'] }};
             @endif
 
             // Handle pemulihan denda checkbox
             if (pemulihanCheckbox) {
-                pemulihanCheckbox.addEventListener('change', function () {
+                pemulihanCheckbox.addEventListener('change', function() {
                     if (this.checked) {
                         // PENGAMPUNAN: Hitung total tanpa denda (pastikan tidak negatif)
                         currentTotal = Math.max(0, originalTotal - dendaAmount);
-                        
+
                         // Update input hidden
                         jumlahRpInput.value = currentTotal;
                         pemulihanInput.value = '1';
 
                         // Update tampilan denda menjadi Rp 0 dengan strikethrough
-                        dendaAmountElement.innerHTML = 
-                            '<span style="text-decoration: line-through; color: #dc3545;">Rp ' + formatCurrency(dendaAmount) + '</span> ' +
+                        dendaAmountElement.innerHTML =
+                            '<span style="text-decoration: line-through; color: #dc3545;">Rp ' +
+                            formatCurrency(dendaAmount) + '</span> ' +
                             '<span class="text-success fw-bold">Rp 0 (Diampuni)</span>';
 
                         // Update tampilan total tagihan
-                        totalTagihanElement.innerHTML = 
-                            'Rp ' + formatCurrency(currentTotal) + 
-                            ' <small class="text-success fw-bold d-block"><i class="mdi mdi-gift me-1"></i>Denda Rp ' + 
+                        totalTagihanElement.innerHTML =
+                            'Rp ' + formatCurrency(currentTotal) +
+                            ' <small class="text-success fw-bold d-block"><i class="mdi mdi-gift me-1"></i>Denda Rp ' +
                             formatCurrency(dendaAmount) + ' diampuni</small>';
 
                         // Tambahkan class untuk highlight
@@ -265,7 +294,7 @@
                     } else {
                         // BATALKAN PENGAMPUNAN: Kembalikan ke total asli
                         currentTotal = originalTotal;
-                        
+
                         // Update input hidden
                         jumlahRpInput.value = currentTotal;
                         pemulihanInput.value = '0';
@@ -288,7 +317,7 @@
             }
 
             // Calculate and display kembalian when uang_bayar changes
-            uangBayarInput.addEventListener('input', function () {
+            uangBayarInput.addEventListener('input', function() {
                 const uangBayar = parseFloat(this.value) || 0;
                 const jumlahRp = parseFloat(jumlahRpInput.value) || 0;
                 const kembalian = uangBayar - jumlahRp;

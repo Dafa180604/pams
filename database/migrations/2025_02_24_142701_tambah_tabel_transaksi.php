@@ -19,6 +19,7 @@ return new class extends Migration
             $table->text('detail_biaya');
             $table->unsignedBigInteger('id_biaya_denda')->nullable();
             $table->integer('rp_denda')->nullable();
+            $table->integer('rp_pengampunan')->nullable();
             $table->integer('jumlah_rp');
             $table->enum('status_pembayaran', ['Lunas', 'Belum Bayar']);
             $table->dateTime('tgl_pembayaran')->nullable();
